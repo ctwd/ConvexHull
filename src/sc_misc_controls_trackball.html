@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - trackball controls</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #000;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color:#000;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+
+			}
+
+			a {
+				color: red;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="container"></div>
+		<div id="info">
+			<a href="http://threejs.org" target="_blank">three.js</a> - trackball controls example</br>
+			MOVE mouse &amp; press LEFT/A: rotate, MIDDLE/S: zoom, RIGHT/D: pan
+		</div>
+
+		<script src="build/three.js"></script>
+
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script src="js/Detector.js"></script>
+
+		<script src="js/utils.js"></script>
+		<script src="js/IncrementalHull.js"></script>
+		<script src="js/GiftWrappingHull.js"></script>
+		<script src="js/ConflictGraphHull.js"></script>	
+		<script src="js/DivideConcurHull.js"></script>	
+
+		<script>
+			EmptyGeometry = function() {
+				THREE.Geometry.call(this)
+				this.type = 'EmptyGeometry';
+				var scope = this;
+
+				this.mergeVertices();
+			}
+			EmptyGeometry.prototype = Object.create( THREE.Geometry.prototype );
+			EmptyGeometry.prototype.constructor = EmptyGeometry;
+			
+			PyramidGeometry = function() {
+				THREE.Geometry.call(this)
+				this.type = 'PyramidGeometry';
+				var scope = this;
+				normal = new THREE.Vector3(0,0,1);
+
+				scope.vertices.push(new THREE.Vector3(0,0,0))
+				scope.vertices.push(new THREE.Vector3(100,0,0))
+				scope.vertices.push(new THREE.Vector3(0,100,0))
+				scope.vertices.push(new THREE.Vector3(0,0,100))
+
+				face = new THREE.Face3(0,2,1);
+				face.normal.copy( normal );
+				scope.faces.push(face);	
+				face = new THREE.Face3(0,1,3);
+				face.normal.copy( normal );
+				scope.faces.push(face);				
+				face = new THREE.Face3(0,3,2);
+				face.normal.copy( normal );
+				scope.faces.push(face);				
+				face = new THREE.Face3(1,2,3);
+				face.normal.copy( normal );
+				scope.faces.push(face);
+				this.mergeVertices();
+			}
+			PyramidGeometry.prototype = Object.create( THREE.Geometry.prototype );
+			PyramidGeometry.prototype.constructor = PyramidGeometry;
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+
+			var camera, controls, scene, renderer;
+
+			var cross;
+
+			init();
+			animate();
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 1500;
+
+				controls = new THREE.TrackballControls( camera );
+
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+
+				controls.noZoom = false;
+				controls.noPan = false;
+
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+
+				controls.keys = [ 65, 83, 68 ];
+
+				controls.addEventListener( 'change', render );
+
+				// world
+
+				scene = new THREE.Scene();
+				//scene.fog = new THREE.FogExp2( 0xcccccc, 0.002 );
+
+				// var geometry = new PyramidGeometry( 0, 10, 30, 4, 1 );
+				// var material =  new THREE.MeshLambertMaterial( { color:0xffffff, shading: THREE.FlatShading } );
+
+				// for ( var i = 0; i < 50; i ++ ) {
+
+				// 	var mesh = new THREE.Mesh( geometry, material );
+				// 	mesh.position.x = ( Math.random() - 0.5 ) * 1000;
+				// 	mesh.position.y = ( Math.random() - 0.5 ) * 1000;
+				// 	mesh.position.z = ( Math.random() - 0.5 ) * 1000;
+				// 	mesh.updateMatrix();
+				// 	mesh.matrixAutoUpdate = false;
+				// 	scene.add( mesh );
+				// }
+
+
+				var geometry = new IncrementalHullGeometry(50000)
+				// var geometry = new GiftWrappingHullGeometry(50000)
+				// var geometry = new ConflictGraphHullGeometry(50000)
+				// var geometry = new DivideConcurHullGeometry(50000)
+				geometry.hull();
+
+				var topMaterial =  new THREE.MeshLambertMaterial( { color:0x00ff00, shading: THREE.FlatShading } );
+				var sphereMaterial =  new THREE.MeshNormalMaterial( { color:0x00ff00, shading: THREE.FlatShading } );
+				var geometryMaterial =  new THREE.MeshNormalMaterial( { color:0x0000ff, shading: THREE.FlatShading } );
+				var sphere = new THREE.SphereGeometry(5,4,4)
+				sphere.computeVertexNormals();
+				for (var i = 0; i < geometry.vertices.length; i++)
+				{
+					var mesh = new THREE.Mesh( sphere, sphereMaterial );
+					if(geometry.vertices[i].top) {
+						//alert(i);
+						mesh = new THREE.Mesh( sphere, topMaterial );
+					}
+					// else {
+					// 	continue;
+					// }
+					mesh.position.x = geometry.vertices[i].x;
+					mesh.position.y = geometry.vertices[i].y;
+					mesh.position.z = geometry.vertices[i].z;
+					mesh.updateMatrix();
+					mesh.matrixAutoUpdate = false;
+					scene.add( mesh );
+				}
+				var mesh = new THREE.Mesh(geometry, geometryMaterial);
+				mesh.matrixAutoUpdate = false;
+				scene.add(mesh);
+				// lights
+
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( 1, 1, 1 );
+				scene.add( light );
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( -1, -1, 1 );
+				scene.add( light );
+				// light = new THREE.DirectionalLight( 0xffffff );
+				// light.position.set( -1, 1, -1 );
+				// scene.add( light );
+				// light = new THREE.DirectionalLight( 0xffffff );
+				// light.position.set( 1, -1, -1 );
+				// scene.add( light );
+				// light = new THREE.DirectionalLight( 0xffffff );
+				// light.position.set( -1, 1, 1 );
+				// scene.add( light );
+				// light = new THREE.DirectionalLight( 0xffffff );
+				// light.position.set( 1, 1, -1 );
+				// scene.add( light );
+				// light = new THREE.DirectionalLight( 0xffffff );
+				// light.position.set( 1, -1, 1 );
+				// scene.add( light );
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( -1, -1, -1 );
+				scene.add( light );
+
+				light = new THREE.AmbientLight( 0x222222 );
+				scene.add( light );
+
+
+				// renderer
+
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				//renderer.setClearColor( scene.fog.color );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				//
+
+				render();
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.handleResize();
+
+				render();
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				controls.update();
+
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+				stats.update();
+
+			}
+
+
+		</script>
+
+	</body>
+</html>
