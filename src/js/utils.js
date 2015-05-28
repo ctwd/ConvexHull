@@ -37,8 +37,9 @@ var rand = (function() {
 	// var seed = 4;
 	// inc构建失败，需要清空point的triangle表。
 	// var seed = 7;
-	// merge 的时候剔除面片，因为预先把所有边界上的面全置为false了，所以有排除不充分的请款出现。
+	// merge 的时候剔除面片，因为预先把所有边界上的面全置为false了，所以有排除不充分的情况出现。
 	// var seed = 15;
+	// 排除面片的深度优先搜索出问题了。
 	// var seed = 68;
 	var seed = 4;
 
