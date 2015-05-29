@@ -12,8 +12,8 @@ GiftWrappingHullGeometry = function(pointNumber) {
 
 	scope.hull = function() {
 		var delta = 1e-9;
-		var pl = [];
-		var tl = [];
+		var pointList = [];
+		var triangleList = [];
 
 		if (scope.vertices.length < 4) {
 			return;
@@ -24,138 +24,140 @@ GiftWrappingHullGeometry = function(pointNumber) {
 			vertex.index = i;
 			vertex.triangles = [];
 			vertex.used = false;
-			pl.push(vertex);
+			pointList.push(vertex);
 		}
-		var i_a = 0;
-		for (var i = 1; i < pl.length; i++) {
-			if (pl[i].y < pl[i_a].y) {
-				i_a = i;
+		var indexA = 0;
+		var initList = [];
+		for (var i = 1; i < pointList.length; i++) {
+			if (pointList[i].y < pointList[indexA].y) {
+				indexA = i;
 			}
 		}
-
-		var i_b = (i_a + 1) % pl.length;
-		var b_th = Math.abs((pl[i_b].clone().sub(pl[i_a])).angleTo(pl[i_b].clone().setY(pl[i_a].y).sub(pl[i_a])));
-		for (var i = 0; i < pl.length; i++) {
-			if (i == i_b || i == i_a) {
+		pointA = pointList[indexA];
+		var indexB = (indexA + 1) % pointList.length;
+		var angleB = Math.abs((pointList[indexB].clone().sub(pointA)).angleTo(pointList[indexB].clone().setY(pointA.y).sub(pointA)));
+		for (var i = 0; i < pointList.length; i++) {
+			if (i == indexA || i == indexB) {
 				continue;
 			}
-			i_th = Math.abs((pl[i].clone().sub(pl[i_a])).angleTo(pl[i].clone().setY(pl[i_a].y).sub(pl[i_a])));
-			if (i_th < b_th) {
-				b_th = i_th;
-				i_b = i;
+			angleI = Math.abs((pointList[i].clone().sub(pointA)).angleTo(pointList[i].clone().setY(pointA.y).sub(pointA)));
+			if (angleI < angleB) {
+				angleB = angleI;
+				indexB = i;
 			}
 		}
-
-		var i_c = (Math.max(i_b, i_a) + 1) % pl.length;
-		triNormal = (pl[i_b].clone().sub(pl[i_a])).cross(pl[i_b].clone().setY(pl[i_a].y).sub(pl[i_a]));
-		faceNormal = (pl[i_b].clone().sub(pl[i_a])).cross(triNormal);
+		pointB = pointList[indexB];
+		var indexC = (Math.max(indexA, indexB) + 1) % pointList.length;
+		triNormal = (pointB.clone().sub(pointA)).cross(pointB.clone().setY(pointA.y).sub(pointA));
+		faceNormal = (pointB.clone().sub(pointA)).cross(triNormal);
 		if (faceNormal.y < -delta) {
 			faceNormal.negate();
 		}
-		cNormal = (pl[i_b].clone().sub(pl[i_a])).cross(pl[i_c].clone().sub(pl[i_a]))
-		if (cNormal.y < -delta) {
-			cNormal.negate();
+		normalC = (pointB.clone().sub(pointA)).cross(pointList[indexC].clone().sub(pointA))
+		if (normalC.y < -delta) {
+			normalC.negate();
 		}
-		c_th = Math.abs(faceNormal.angleTo(cNormal));
-		for (var i = 0; i < pl.length; i++) {
-			if (i == i_a || i == i_b || i == i_c) {
+		angleC = Math.abs(faceNormal.angleTo(normalC));
+		for (var i = 0; i < pointList.length; i++) {
+			if (i == indexA || i == indexB || i == indexC) {
 				continue;
 			}
-			iNormal = (pl[i_b].clone().sub(pl[i_a])).cross(pl[i].clone().sub(pl[i_a]))
-			if (iNormal.y < -delta) {
-				iNormal.negate();
+			normalI = (pointB.clone().sub(pointA)).cross(pointList[i].clone().sub(pointA))
+			if (normalI.y < -delta) {
+				normalI.negate();
 			}
-			i_th = Math.abs(faceNormal.angleTo(iNormal))
-			if (i_th < c_th) {
-				c_th = i_th;
-				i_c = i;
+			angleI = Math.abs(faceNormal.angleTo(normalI))
+			if (angleI < angleC) {
+				angleC = angleI;
+				indexC = i;
 			}
 		}
+		pointC = pointList[indexC];
 
-		pl[i_a].used = true;
-		pl[i_b].used = true;
-		pl[i_c].used = true;
+		pointA.used = true;
+		pointB.used = true;
+		pointC.used = true;
 
-		tr = new Triangle(i_a, i_b, i_c, 0);
-		faceNormal = (pl[i_b].clone().sub(pl[i_a])).cross(pl[i_c].clone().sub(pl[i_a]));
+		var triangle = new Triangle(indexA, indexB, indexC, 0);
+		faceNormal = (pointB.clone().sub(pointA)).cross(pointC.clone().sub(pointA));
 		if (faceNormal.y > delta) {
-			swap(tr.points, 1, 2);
+			swap(triangle.points, 1, 2);
 		}
-		pl[i_a].triangles.push(tr)
-		pl[i_b].triangles.push(tr)
-		pl[i_c].triangles.push(tr)
+		for (var j = 0; j < 3; j++) {
+			pointList[triangle.points[j]].triangles.push(triangle);
+		}
 
-		tl.push(tr);
+		triangleList.push(triangle);
 
-		for (var i = 0; i < tl.length; i++) {
-			ps = tl[i].points;
-			trp = [pl[ps[0]], pl[ps[1]], pl[ps[2]]];
-			faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+		for (var i = 0; i < triangleList.length; i++) {
+			var pointIds = triangleList[i].points;
+			var points = [pointList[pointIds[0]], pointList[pointIds[1]], pointList[pointIds[2]]];
+			var face = new THREE.Face3(pointIds[0], pointIds[1], pointIds[2]);
+			var faceNormal = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
 			for (var j = 0; j < 3; j++) {
-				if (tl[i].neighbors[j] == null) {
-					j_i = null;
-					j_th = null;
-					for (var k = 0; k < pl.length; k++) {
-						if (k == ps[0] || k == ps[1] || k == ps[2]) {
+				if (triangleList[i].neighbors[j] == null) {
+					indexNext = null;
+					angleNext = null;
+					for (var k = 0; k < pointList.length; k++) {
+						if (k == pointIds[0] || k == pointIds[1] || k == pointIds[2]) {
 							continue;
 						}
-						if (j_i == null) {
-							j_i = k;
-							trp = [pl[ps[(j + 2) % 3]], pl[ps[(j + 1) % 3]], pl[k]];
-							jNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
-							j_th = faceNormal.angleTo(jNormal);
+						points = [pointList[pointIds[(j + 2) % 3]], pointList[pointIds[(j + 1) % 3]], pointList[k]];
+						nromalK = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
+						angleK = faceNormal.angleTo(nromalK);
+						if (indexNext == null) {
+							indexNext = k;
+							angleNext = angleK
 							continue;
-						}
-						trp = [pl[ps[(j + 2) % 3]], pl[ps[(j + 1) % 3]], pl[k]];
-						kNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
-						k_th = faceNormal.angleTo(kNormal);
-						if (k_th < j_th) {
-							j_th = k_th;
-							j_i = k;
+						} else {
+							if (angleK < angleNext) {
+								angleNext = angleK;
+								indexNext = k;
+							}
 						}
 					}
-					var tr = new Triangle(ps[(j + 2) % 3], ps[(j + 1) % 3], j_i, tl.length);
-					tl[i].neighbors[j] = tr.index;
-					tr.neighbors[2] = i;
-					if (pl[j_i].used) {
-						for (var k = 0; k < pl[j_i].triangles.length; k++) {
-							tri = pl[j_i].triangles[k];
+					var triangle = new Triangle(pointIds[(j + 2) % 3], pointIds[(j + 1) % 3], indexNext, triangleList.length);
+					triangleList[i].neighbors[j] = triangle.index;
+					triangle.neighbors[2] = i;
+					if (pointList[indexNext].used) {
+						for (var k = 0; k < pointList[indexNext].triangles.length; k++) {
+							var triangles = pointList[indexNext].triangles[k];
 							for (var l = 0; l < 3; l++) {
-								if (tri.points[l] == ps[(j + 2) % 3]) {
-									tr.neighbors[1] = tri;
-									if(tri.points[(l+1)%3] == j_i) {
-										tri.neighbors[(l+2)%3] = tr;
+								if (triangles.points[l] == pointIds[(j + 2) % 3]) {
+									triangle.neighbors[1] = triangles;
+									if (triangles.points[(l + 1) % 3] == indexNext) {
+										triangles.neighbors[(l + 2) % 3] = triangle;
 									} else {
-										tri.neighbors[(l+2)%3] = tr;
+										triangles.neighbors[(l + 2) % 3] = triangle;
 									}
 									break;
-								} else if (tri.points[l] == ps[(j + 1) % 3]) {
-									tr.neighbors[0] = tri;
-									if(tri.points[(l+1)%3] == j_i) {
-										tri.neighbors[(l+2)%3] = tr;
+								} else if (triangles.points[l] == pointIds[(j + 1) % 3]) {
+									triangle.neighbors[0] = triangles;
+									if (triangles.points[(l + 1) % 3] == indexNext) {
+										triangles.neighbors[(l + 2) % 3] = triangle;
 									} else {
-										tri.neighbors[(l+2)%3] = tr;
+										triangles.neighbors[(l + 2) % 3] = triangle;
 									}
 									break;
 								}
 							}
 						}
 					} else {
-						pl[j_i].used = true;
+						pointList[indexNext].used = true;
 					}
-					pl[j_i].triangles.push(tr);
-					pl[ps[(j + 2) % 3]].triangles.push(tr);
-					pl[ps[(j + 1) % 3]].triangles.push(tr);
-					tl.push(tr);
+					for (var k = 0; k < 3; k++) {
+						pointList[triangle.points[k]].triangles.push(triangle);
+					}
+					triangleList.push(triangle);
 				}
 			}
 		}
-		for (var i = 0; i < tl.length; i++) {
-			if (tl[i].valid) {
-				ps = tl[i].points;
-				face = new THREE.Face3(pl[ps[0]].index, pl[ps[1]].index, pl[ps[2]].index);
-				trp = [pl[ps[0]], pl[ps[1]], pl[ps[2]]];
-				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+		for (var i = 0; i < triangleList.length; i++) {
+			if (triangleList[i].valid) {
+				var pointIds = triangleList[i].points;
+				var points = [pointList[pointIds[0]], pointList[pointIds[1]], pointList[pointIds[2]]];
+				var face = new THREE.Face3(pointIds[0], pointIds[1], pointIds[2]);
+				var faceNormal = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
 				face.normal.copy(faceNormal);
 				scope.faces.push(face);
 			}
