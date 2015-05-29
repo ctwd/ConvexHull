@@ -57,8 +57,8 @@ IncrementalHullGeometry = function(pointNumber) {
 		if (scope.vertices.length < 4) {
 			return;
 		}
-		var vertices = scope.vertices;
 
+		var vertices = scope.vertices;
 		var valid = false;
 		for (var i = 1; i < vertices.length; i++) {
 			if (vertices[0].distanceTo(vertices[i]) > delta) {
@@ -73,7 +73,9 @@ IncrementalHullGeometry = function(pointNumber) {
 
 		valid = false;
 		for (var i = 2; i < vertices.length; i++) {
-			if (((vertices[0].clone().sub(vertices[1])).cross((vertices[0].clone().sub(vertices[i])))).length() > delta) {
+			var vector1 = (vertices[0].clone().sub(vertices[1]));
+			var vector2 = (vertices[0].clone().sub(vertices[i]));
+			if ((vector1.cross(vector2)).length() > delta) {
 				swap(vertices, 2, i);
 				valid = true;
 				break;
@@ -82,10 +84,13 @@ IncrementalHullGeometry = function(pointNumber) {
 		if (!valid) {
 			return;
 		}
-		valid = false;
+		valid = true;
 		var positive = 0;
 		for (var i = 3; i < vertices.length; i++) {
-			positive = ((vertices[1].clone().sub(vertices[0])).cross((vertices[2].clone().sub(vertices[0])))).dot(vertices[i].clone().sub(vertices[0]))
+			var vector1 = (vertices[1].clone().sub(vertices[0]));
+			var vector2 = (vertices[2].clone().sub(vertices[0]));
+			var vector3 = vertices[i].clone().sub(vertices[0]);
+			positive = (vector1.cross(vector2)).dot(vector3);
 			if (Math.abs(positive) > delta) {
 				swap(vertices, 3, i);
 				valid = true;
@@ -119,18 +124,24 @@ IncrementalHullGeometry = function(pointNumber) {
 			}
 		}
 
-		pointList[0].triangles.push(triangleList[0]);
-		pointList[0].triangles.push(triangleList[2]);
-		pointList[0].triangles.push(triangleList[3]);
-		pointList[1].triangles.push(triangleList[0]);
-		pointList[1].triangles.push(triangleList[1]);
-		pointList[1].triangles.push(triangleList[3]);
-		pointList[2].triangles.push(triangleList[0]);
-		pointList[2].triangles.push(triangleList[1]);
-		pointList[2].triangles.push(triangleList[2]);
-		pointList[3].triangles.push(triangleList[1]);
-		pointList[3].triangles.push(triangleList[2]);
-		pointList[3].triangles.push(triangleList[3]);
+		for (var i = 0; i < 4; i++) {
+			var triangle = triangleList[i];
+			for (var j = 0; j < 3; j++) {
+				pointList[triangle.points[j]].triangles.push(triangle);
+			}
+		}
+		// pointList[0].triangles.push(triangleList[0]);
+		// pointList[0].triangles.push(triangleList[2]);
+		// pointList[0].triangles.push(triangleList[3]);
+		// pointList[1].triangles.push(triangleList[0]);
+		// pointList[1].triangles.push(triangleList[1]);
+		// pointList[1].triangles.push(triangleList[3]);
+		// pointList[2].triangles.push(triangleList[0]);
+		// pointList[2].triangles.push(triangleList[1]);
+		// pointList[2].triangles.push(triangleList[2]);
+		// pointList[3].triangles.push(triangleList[1]);
+		// pointList[3].triangles.push(triangleList[2]);
+		// pointList[3].triangles.push(triangleList[3]);
 
 		for (var i = 4; i < pointList.length; i++) {
 			for (var j = 0; j < triangleList.length; j++) {
