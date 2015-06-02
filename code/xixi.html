@@ -1,0 +1,494 @@
+<html>
+
+<head>
+	<script src="./js/three.js"></script>
+
+	<script src="./js/myjs/myGeometry.js"></script>
+	<script src="./js/TrackballControls.js"></script>
+	<script src="./js/stats.min.js"></script>
+	<script src="./js/tween.min.js"></script>
+	<script src="./js/Detector.js"></script>
+
+	<style type="text/css">
+			body 
+			{
+				color: #000;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color:#000;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+
+			}
+
+			a {
+				color: red;
+			}
+
+	</style>
+
+</head>
+
+<body>
+	<div id="container"></div>
+	<div id="info">
+		<a href="http://threejs.org" target="_blank">three.js</a>
+		- trackball controls example
+		<br/>
+		MOVE mouse &amp; press LEFT/A: rotate, MIDDLE/S: zoom, RIGHT/D: pan
+	</div>
+
+	<script>
+			EmptyGeometry = function() {
+				THREE.Geometry.call(this)
+				this.type = 'EmptyGeometry';
+				var scope = this;
+
+				this.mergeVertices();
+			}
+			EmptyGeometry.prototype = Object.create( THREE.Geometry.prototype );
+			EmptyGeometry.prototype.constructor = EmptyGeometry;
+			
+			PyramidGeometry = function() {
+				THREE.Geometry.call(this)
+				this.type = 'PyramidGeometry';
+				var scope = this;
+				normal = new THREE.Vector3(0,0,1);
+
+				scope.vertices.push(new THREE.Vector3(0,0,0))
+				scope.vertices.push(new THREE.Vector3(100,0,0))
+				scope.vertices.push(new THREE.Vector3(0,100,0))
+				scope.vertices.push(new THREE.Vector3(0,0,100))
+
+				face = new THREE.Face3(0,2,1);
+				face.normal.copy( normal );
+				scope.faces.push(face);	
+				face = new THREE.Face3(0,1,3);
+				face.normal.copy( normal );
+				scope.faces.push(face);				
+				face = new THREE.Face3(0,3,2);
+				face.normal.copy( normal );
+				scope.faces.push(face);				
+				face = new THREE.Face3(1,2,3);
+				face.normal.copy( normal );
+				scope.faces.push(face);
+				this.mergeVertices();
+			}
+			PyramidGeometry.prototype = Object.create( THREE.Geometry.prototype );
+			PyramidGeometry.prototype.constructor = PyramidGeometry;
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+
+			var camera, controls, scene, renderer;
+
+            
+            var mesh;
+            var geometry;
+
+ 
+            var trigeometry;
+            var trimesh ;
+
+            var showgeometry;
+            var showmesh;
+            
+            var tween1,tween2;
+             
+            var axis =new Array(0,1,0,3,2,3);
+            var pp = new Array(2,1,0);
+            var tar = new Array(3,2,1);
+            
+            var index_axis=0;
+            var index_pp=0; 
+            var startv;
+            var faceNum =0;
+
+
+            var sclar = 2;
+
+            var current = new Array(3);
+            var target = new Array(3);
+           
+			init();
+			animate();
+
+			function init() {
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 1500;
+                camera.position.y = -500;
+ 
+
+				controls = new THREE.TrackballControls( camera );
+
+				controls.rotateSpeed = 1.0;
+				controls.zoomSpeed = 1.2;
+				controls.panSpeed = 0.8;
+
+				controls.noZoom = false;
+				controls.noPan = false;
+
+				controls.staticMoving = true;
+				controls.dynamicDampingFactor = 0.3;
+
+				controls.keys = [ 65, 83, 68 ];
+
+				controls.addEventListener( 'change', render );
+
+				// world
+
+				scene = new THREE.Scene();
+				
+          	    geometry = new MyGeometry();
+                
+                showgeometry = new THREE.Geometry();
+
+                showgeometry.vertices = geometry.vertices;
+
+                showgeometry.faces[faceNum] = geometry.faces[faceNum];
+                showgeometry.dynamic = true;
+
+				// lights
+              
+
+          	    trigeometry = new THREE.Geometry();
+            
+     
+                //需插值移动的点放在第一个位置0,随着0的移动其他四个坐标也会改变，则重新计算，更改位置，重绘
+               
+                var vv = geometry.vertices[axis[index_axis]].clone().add(geometry.vertices[axis[index_axis+1]]);
+                vv.sub(geometry.vertices[pp[index_pp]]);
+
+                trigeometry.vertices.push(vv);
+
+                startv = vv;
+                 current= { x: startv.x , y: startv.y, z:  startv.z};
+
+                //以 g 0 1 为轴，将2的对称点--plane 0 移到3的位置
+                
+                //p中 1和2 在变化过程中是不变的，其与0,1共线
+
+                //1
+                var pv1 = geometry.vertices[axis[index_axis]].clone().sub(geometry.vertices[axis[index_axis+1]]);
+                pv1.multiplyScalar(sclar);
+                pv1.add(geometry.vertices[axis[index_axis]]);
+                trigeometry.vertices.push(pv1);
+                
+                //2
+                var pv2 = geometry.vertices[axis[index_axis+1]].clone().sub(geometry.vertices[axis[index_axis]]);
+                pv2.multiplyScalar(sclar);
+                pv2.add(geometry.vertices[axis[index_axis+1]]);
+                trigeometry.vertices.push(pv2);
+
+                // 3 4要根据p中的0及 1,2来计算
+                
+                //3
+                midv = geometry.vertices[axis[index_axis]].clone().add(geometry.vertices[axis[index_axis+1]]);
+                midv.multiplyScalar(0.5);
+
+                var addDir = trigeometry.vertices[0].clone().sub(midv);
+                addDir.multiplyScalar(sclar);
+
+                var pv3 = trigeometry.vertices[1].clone().add(addDir);
+                trigeometry.vertices.push(pv3);
+
+               
+                //4
+                var pv4 = trigeometry.vertices[2].clone().add(addDir);
+                trigeometry.vertices.push(pv4);
+
+                 
+                face = new THREE.Face3(1,2,3);
+				trp = [trigeometry.vertices[1],trigeometry.vertices[2], trigeometry.vertices[3]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+				face = new THREE.Face3(1,3,2);
+				trp = [trigeometry.vertices[1],trigeometry.vertices[3], trigeometry.vertices[2]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+                
+                face = new THREE.Face3(2,3,4);
+				trp = [trigeometry.vertices[2],trigeometry.vertices[3], trigeometry.vertices[4]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+                face = new THREE.Face3(2,4,3);
+				trp = [trigeometry.vertices[2],trigeometry.vertices[4], trigeometry.vertices[3]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+
+
+
+                trigeometry.dynamic =  true;
+                
+                var geometryMaterial =  new THREE.MeshNormalMaterial( { color:0x0000ff, shading: THREE.FlatShading } );
+              
+		       
+                trimesh = new THREE.Mesh(trigeometry,geometryMaterial);
+                scene.add(trimesh);
+       
+
+                showmesh = new THREE.Mesh(showgeometry,geometryMaterial);
+                scene.add(showmesh);
+                
+                //初始化源和目标
+     
+
+                target[0] = geometry.vertices[tar[index_pp]].x;
+                target[1]= geometry.vertices[tar[index_pp]].y;
+                target[2] = geometry.vertices[tar[index_pp]].z;
+
+                  
+
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( 1, 1, 1 );
+				scene.add( light );
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( -1, -1, 1 );
+				scene.add( light );
+				
+
+				light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( -1, -1, -1 );
+				scene.add( light );
+
+				light = new THREE.AmbientLight( 0x222222 );
+				scene.add( light );
+
+
+				// renderer
+
+				renderer = new THREE.WebGLRenderer( { antialias: false } );
+				//renderer.setClearColor( scene.fog.color );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				container = document.getElementById('container');
+				container.appendChild(renderer.domElement);
+
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				//
+                
+                initTween();
+
+				render();
+
+			}
+
+            var current;
+
+			function initTween()
+			{
+			
+			
+
+
+             var update	= function()
+             {
+             	//每次更新current的值时，设置trigeometry的信息改变，从而绘制时得到新的图形
+
+
+		        trigeometry.vertices[0].x = current.x;
+		        trigeometry.vertices[0].y = current.y;
+		        trigeometry.vertices[0].z = current.z;
+                
+             
+                var addDir = trigeometry.vertices[0].clone().sub(midv);
+                addDir.multiplyScalar(2);
+
+                var pv3 = trigeometry.vertices[1].clone().add(addDir);
+                trigeometry.vertices[3] = pv3;
+
+                //4
+                var pv4 = trigeometry.vertices[2].clone().add(addDir);
+                trigeometry.vertices[4] = pv4; 
+            
+                trigeometry.verticesNeedUpdate = true; 
+             
+	         }
+	         var complete = function()
+	         {
+                //每个tween完成后trigometry需改变自己的初始状态，重新初始化其顶点信息
+                 index_axis = index_axis+2;
+                 index_pp++;
+                 trigeometry.vertices=[];
+                 trigeometry.faces=[];
+                 faceNum++;
+                 
+                 showgeometry.faces.push(geometry.faces[faceNum]);
+                showgeometry.elementsNeedUpdate =true;
+
+                 //重新初始化----之后可变成一个方法
+
+                 var vv = geometry.vertices[axis[index_axis]].clone().add(geometry.vertices[axis[index_axis+1]]);
+                vv.sub(geometry.vertices[pp[index_pp]]);
+
+                trigeometry.vertices.push(vv);
+
+                startv = vv;
+                current= { x: startv.x , y: startv.y, z:  startv.z};
+
+                //以 g 0 1 为轴，将2的对称点--plane 0 移到3的位置
+                
+                //p中 1和2 在变化过程中是不变的，其与0,1共线
+
+                //1
+                var pv1 = geometry.vertices[axis[index_axis]].clone().sub(geometry.vertices[axis[index_axis+1]]);
+                pv1.multiplyScalar(sclar);
+                pv1.add(geometry.vertices[axis[index_axis]]);
+                trigeometry.vertices.push(pv1);
+                
+                //2
+                var pv2 = geometry.vertices[axis[index_axis+1]].clone().sub(geometry.vertices[axis[index_axis]]);
+                pv2.multiplyScalar(sclar);
+                pv2.add(geometry.vertices[axis[index_axis+1]]);
+                trigeometry.vertices.push(pv2);
+
+                // 3 4要根据p中的0及 1,2来计算
+                
+                //3
+                midv = geometry.vertices[axis[index_axis]].clone().add(geometry.vertices[axis[index_axis+1]]);
+                midv.multiplyScalar(0.5);
+
+                var addDir = trigeometry.vertices[0].clone().sub(midv);
+                addDir.multiplyScalar(sclar);
+
+                var pv3 = trigeometry.vertices[1].clone().add(addDir);
+                trigeometry.vertices.push(pv3);
+
+               
+                //4
+                var pv4 = trigeometry.vertices[2].clone().add(addDir);
+                trigeometry.vertices.push(pv4);
+
+                 
+                face = new THREE.Face3(1,2,3);
+				trp = [trigeometry.vertices[1],trigeometry.vertices[2], trigeometry.vertices[3]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+				face = new THREE.Face3(1,3,2);
+				trp = [trigeometry.vertices[1],trigeometry.vertices[3], trigeometry.vertices[2]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+                
+                face = new THREE.Face3(2,3,4);
+				trp = [trigeometry.vertices[2],trigeometry.vertices[3], trigeometry.vertices[4]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+                face = new THREE.Face3(2,4,3);
+				trp = [trigeometry.vertices[2],trigeometry.vertices[4], trigeometry.vertices[3]];
+				faceNormal = (trp[1].clone().sub(trp[0])).cross(trp[2].clone().sub(trp[0]));
+				face.normal.copy(faceNormal);
+				trigeometry.faces.push(face);
+
+
+               
+
+               target[0] = geometry.vertices[tar[index_pp]].x;
+               target[1]= geometry.vertices[tar[index_pp]].y;
+               target[2] = geometry.vertices[tar[index_pp]].z;
+
+              
+                trigeometry.verticesNeedUpdate = true; 
+                tween1.stop();
+                TWEEN.remove(tween1);
+
+                tween1 = new TWEEN.Tween(current)
+						.to( { x: target[0], y: target[1],z:target[2] }, 3000 )
+                        .onUpdate(update)
+						.onComplete(complete);
+						TWEEN.add(tween1);
+
+                 tween1.start();
+	         }
+
+			
+
+			tween1 = new TWEEN.Tween(current)
+						.to( { x: target[0], y: target[1],z:target[2] }, 3000 )
+                        .onUpdate(update)
+						.onComplete(complete);
+
+   
+       /*    tween2 = new TWEEN.Tween(current)
+						.to( { x: target[0], y: target[1],z:target[2] }, 3000 )
+                        .onUpdate(update)
+						.onComplete(complete);
+*/
+			// after tweenHead do tweenBack
+	//		tween1.chain(tween2);
+			// after tweenBack do tweenHead, so it is cycling
+		//	tween2.chain(tween1);
+		           
+            tween1.start();
+
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.handleResize();
+
+				render();
+
+			}
+           
+          
+			function animate() {
+
+				requestAnimationFrame( animate );
+				render();
+				stats.update();
+				controls.update();
+				TWEEN.update();
+
+			}
+
+			function render() {
+
+                // update objects
+           
+               trimesh.geometry.verticesNeedUpdate = true;
+                showmesh.geometry.elementsNeedUpdate =true;
+                showmesh.geometry.uvsNeedUpdate =true;
+                showmesh.geometry.normalsNeedUpdate = true;
+			   renderer.render( scene, camera );
+				
+
+			}
+</script>
+
+</body>
+
+</html>
