@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<title>three.js webgl - convex hull demo</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #000;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				color:#000;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+
+			}
+
+			a {
+				color: red;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="container"></div>
+
+		<script src="build/three.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+		<script src="js/Detector.js"></script>
+		<script src='js/libs/dat.gui.js'></script>
+
+
+		<script src="js/utils.js"></script>
+		<script src="js/IncrementalHull.js"></script>
+		<script src="js/GiftWrappingHull.js"></script>
+		<script src="js/ConflictGraphHull.js"></script>
+		<script src="js/DivideConquerHull.js"></script>
+		<script src="js/SimpleGeometry.js"></script>
+		<script src="js/Controls.js"></script>
+
+		<script>
+
+			if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container, stats;
+
+			var camera, controls, scene, renderer;
+
+			var gui;
+
+			var points = [];
+
+			var geometry, meta;
+
+			var var1, var2, lastTime, objs = [], stressId = -1;
+
+			var hullValid;
+
+			init();
+
+			animate();
+
+			function init() {
+				
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 1100;
+
+				// world
+				scene = new THREE.Scene();
+				
+				// control panel
+				setupGUI();
+
+				// renderer
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.sortObjects = false;
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+				
+				stats = new Stats();
+				stats.domElement.style.position = 'absolute';
+				stats.domElement.style.top = '0px';
+				stats.domElement.style.zIndex = 100;
+				container.appendChild( stats.domElement );
+
+				// controls
+				controls = new THREE.TrackballControls( camera, renderer.domElement );
+				controls.dynamicDampingFactor = 0.3;
+				controls.addEventListener( 'change', render );
+				// controls.noZoom = true;
+				// controls.noPan = true;
+
+				window.addEventListener( 'resize', onWindowResize, false );
+				
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.handleResize();
+
+				render();
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+				controls.update();
+				render();
+
+			}
+
+			function render() {
+				if (!playConfig.animation) {
+					fillFinalGeometry();
+				} else if (playConfig.paused) {
+					stayPaused();
+				} else {
+					updateScene();
+				}
+				renderer.render(scene, camera);
+				stats.update();
+			}
+
+
+		</script>
+
+	</body>
+</html>

@@ -32,6 +32,49 @@ var Triangle = function(_a, _b, _c, _index) {
 	}
 }
 
+function initPoints(count) {
+	var vertices = [];
+	for (var i = 0; i < count; i++) {
+		var vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+		var dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		while (dis > 500 * 500) {
+			vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+			dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		}
+		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
+		vertices.push(vertex);
+	}
+	sort(vertices, 0, vertices.length - 1);
+	return vertices;
+}
+
+function sort(vector, l, r) {
+	if (l >= r) {
+		return;
+	}
+	pin = vector[l];
+	var lp = l + 1;
+	var rp = r;
+	while (lp < rp) {
+		while (lp < rp && vector[lp].x <= pin.x) {
+			lp++;
+		}
+		while (rp > lp && vector[rp].x > pin.x) {
+			rp--;
+		}
+		swap(vector, lp, rp);
+	}
+	pinpos = lp;
+	if (vector[lp].x > pin.x) {
+		pinpos = lp - 1;
+	} else {
+		pinpos = lp;
+	}
+	swap(vector, l, pinpos);
+	sort(vector, l, pinpos - 1);
+	sort(vector, pinpos + 1, r);
+}
+
 var rand = (function() {
 	//dfs2 的时候笔误+triangleRing置false笔误
 	// var seed = 4;

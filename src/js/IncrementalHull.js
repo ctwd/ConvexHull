@@ -3,16 +3,16 @@ IncrementalHullGeometry = function(pointNumber) {
 	this.type = 'IncrementalHullGeometry';
 	var scope = this;
 
-	for (var i = 0; i < pointNumber; i++) {
-		vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
-		scope.vertices.push(vertex);
-	};
+	// for (var i = 0; i < pointNumber; i++) {
+	// 	vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+	// 	scope.vertices.push(vertex);
+	// };
 
 	this.mergeVertices();
 
 	scope.hull = function() {
 
-		deal = function(pointId, fromTriangleId, toTriangleId) {
+		deal = function(pointId, fromTriangleId, toTriangleId, removedList) {
 			var triangle = triangleList[toTriangleId];
 			if (triangle.valid) {
 				var pointIds = triangle.points;
@@ -20,7 +20,7 @@ IncrementalHullGeometry = function(pointNumber) {
 				var faceNormal = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
 				var pointDirection = pointList[i].clone().sub(points[0]);
 				if (faceNormal.dot(pointDirection) > delta) {
-					dfs(pointId, toTriangleId);
+					dfs(pointId, toTriangleId, removedList);
 				} else {
 					index = -1;
 					for (var j = 0; j < 3; j++) {
@@ -41,18 +41,20 @@ IncrementalHullGeometry = function(pointNumber) {
 			}
 		}
 
-		dfs = function(pointId, triangleId) {
+		dfs = function(pointId, triangleId, removedList) {
 			var triangle = triangleList[triangleId];
 			triangle.valid = false;
+			removedList.push(triangleId);
 
-			deal(pointId, triangleId, triangle.neighbors[0])
-			deal(pointId, triangleId, triangle.neighbors[1])
-			deal(pointId, triangleId, triangle.neighbors[2])
+			deal(pointId, triangleId, triangle.neighbors[0], removedList)
+			deal(pointId, triangleId, triangle.neighbors[1], removedList)
+			deal(pointId, triangleId, triangle.neighbors[2], removedList)
 		}
 
 		var delta = 1e-9;
 		var pointList = [];
 		var triangleList = [];
+		var steps = [];
 
 		if (scope.vertices.length < 4) {
 			return;
@@ -130,20 +132,15 @@ IncrementalHullGeometry = function(pointNumber) {
 				pointList[triangle.points[j]].triangles.push(triangle);
 			}
 		}
-		// pointList[0].triangles.push(triangleList[0]);
-		// pointList[0].triangles.push(triangleList[2]);
-		// pointList[0].triangles.push(triangleList[3]);
-		// pointList[1].triangles.push(triangleList[0]);
-		// pointList[1].triangles.push(triangleList[1]);
-		// pointList[1].triangles.push(triangleList[3]);
-		// pointList[2].triangles.push(triangleList[0]);
-		// pointList[2].triangles.push(triangleList[1]);
-		// pointList[2].triangles.push(triangleList[2]);
-		// pointList[3].triangles.push(triangleList[1]);
-		// pointList[3].triangles.push(triangleList[2]);
-		// pointList[3].triangles.push(triangleList[3]);
 
+		steps.push([
+			[], 0
+		]);
+		steps.push([
+			[], 4
+		]);
 		for (var i = 4; i < pointList.length; i++) {
+			var removedTriangles = [];
 			for (var j = 0; j < triangleList.length; j++) {
 				if (!triangleList[j].valid) {
 					continue;
@@ -153,7 +150,7 @@ IncrementalHullGeometry = function(pointNumber) {
 				var faceNormal = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
 				var pointDirection = pointList[i].clone().sub(points[0]);
 				if (faceNormal.dot(pointDirection) > delta) {
-					dfs(i, j);
+					dfs(i, j, removedTriangles);
 					break;
 				}
 			}
@@ -175,6 +172,8 @@ IncrementalHullGeometry = function(pointNumber) {
 					}
 				}
 			}
+
+			steps.push([removedTriangles, triangleList.length]);
 		}
 
 		for (var i = 0; i < triangleList.length; i++) {
@@ -189,6 +188,8 @@ IncrementalHullGeometry = function(pointNumber) {
 		}
 
 		scope.mergeVertices();
+
+		return [triangleList, steps];
 	}
 }
 

@@ -1,43 +1,22 @@
-DivideConcurHullGeometry = function(pointNumber) {
+DivideConquerHullGeometry = function(pointNumber) {
 	THREE.Geometry.call(this)
-	this.type = 'DivideConcurHullGeometry';
+	this.type = 'DivideConquerHullGeometry';
 	var scope = this;
 
 	for (var i = 0; i < pointNumber; i++) {
-		vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+
+		var vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+		var dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		while (dis > 500 * 500) {
+			vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+			dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		}
 		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
 		scope.vertices.push(vertex);
 	};
 	this.mergeVertices();
 
 	scope.hull = function() {
-		sort = function(vector, l, r) {
-			if (l >= r) {
-				return;
-			}
-			pin = vector[l];
-			var lp = l + 1;
-			var rp = r;
-			while (lp < rp) {
-				while (lp < rp && vector[lp].x <= pin.x) {
-					lp++;
-				}
-				while (rp > lp && vector[rp].x > pin.x) {
-					rp--;
-				}
-				swap(vector, lp, rp);
-			}
-			pinpos = lp;
-			if (vector[lp].x > pin.x) {
-				pinpos = lp - 1;
-			} else {
-				pinpos = lp;
-			}
-			swap(vector, l, pinpos);
-			sort(vector, l, pinpos - 1);
-			sort(vector, pinpos + 1, r);
-		}
-
 		dcHull = function(l, r) {
 			nextL = function(pointLeft, pointRight) {
 				var pointIds = [];
@@ -550,5 +529,5 @@ DivideConcurHullGeometry = function(pointNumber) {
 	}
 }
 
-DivideConcurHullGeometry.prototype = Object.create(THREE.Geometry.prototype);
-DivideConcurHullGeometry.prototype.constructor = DivideConcurHullGeometry;
+DivideConquerHullGeometry.prototype = Object.create(THREE.Geometry.prototype);
+DivideConquerHullGeometry.prototype.constructor = DivideConquerHullGeometry;
