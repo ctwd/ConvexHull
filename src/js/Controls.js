@@ -4,6 +4,7 @@ var hullConfig = {
 	type: "增量法",
 	convexHull: onHull(),
 	pointCount: 50,
+	openSTL: onOpenFile(),
 };
 
 var playConfig = {
@@ -25,9 +26,12 @@ function setupGUI() {
 	var playGui = gui.addFolder("播放控制");
 	var displayGui = gui.addFolder("显示控制");
 
+
 	hullGui.add(hullConfig, "pointCount").min(4).max(100).step(1).name("点数").onFinishChange();
 	hullGui.add(hullConfig, "clear").name("清空");
 	hullGui.add(hullConfig, "init").name("初始化点集");
+	hullGui.add(hullConfig,"openSTL").name("打开文件");//
+
 	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法"]).name("算法类型").onChange(onType())
 
 	hullGui.add(hullConfig, "convexHull").name("生成凸包");
@@ -45,6 +49,32 @@ function setupGUI() {
 	displayGui.open();
 	gui.width = 200;
 	gui.open();
+}
+function onOpenFile()
+{
+	return function() {
+    try 
+    {
+        var Message = "Please select the folder path.";  //选择框提示信息
+        var Shell = new ActiveXObject("Shell.Application");
+        var Folder = Shell.BrowseForFolder(0, Message, 0x0040, 0x11); //起始目录为：我的电脑
+        //var Folder = Shell.BrowseForFolder(0,Message,0); //起始目录为：桌面
+        if (Folder != null) {
+            Folder = Folder.items();  // 返回 FolderItems 对象
+            Folder = Folder.item();  // 返回 Folderitem 对象
+            Folder = Folder.Path;   // 返回路径
+            if (Folder.charAt(Folder.length - 1) != "\\") {
+                Folder = Folder + "\\";
+            }
+            return Folder;
+        }
+    }
+
+    catch (e) 
+    {
+        alert(e.message);
+    }
+}
 }
 
 function onClear() {
@@ -78,24 +108,42 @@ function onAnimation() {
 
 function onInit() {
 	return function() {
-		onClear()();
+		onClear();
 		points = initPoints(hullConfig.pointCount);
-		var sphereMaterial = new THREE.MeshBasicMaterial({
+		//随机初始化点集显示   
+
+	/*	var sphereMaterial = new THREE.MeshBasicMaterial({
 			color: 0xffff00,
 			opacity: 0.5,
-		});
-		var sphere = new THREE.SphereGeometry(5, 4, 4)
-		for (var i = 0; i < points.length; i++) {
-			var mesh = new THREE.Mesh(sphere, sphereMaterial);
+		});*/
+
+        var pointMaterial = new THREE.PointCloudMaterial({
+			color: 0xffff00,
+			size: 8.0,
+			sizeAttenuation: true
+		});//
+
+		//var sphere = new THREE.SphereGeometry(5, 4, 4)
+        var sphere = new THREE.Geometry();
+		for (var i = 0; i < points.length; i++) 
+		{
+			sphere.vertices.push(
+              new THREE.Vector3( points[i].x, points[i].y, points[i].z)
+				);
+			/*var mesh = new THREE.Mesh(sphere, sphereMaterial);
 			mesh.position.x = points[i].x;
 			mesh.position.y = points[i].y;
 			mesh.position.z = points[i].z;
 			mesh.updateMatrix();
 			mesh.matrixAutoUpdate = false;
 			mesh.name = "point" + i;
-			scene.add(mesh);
+			scene.add(mesh);*/
 		}
+		var pointMesh = new THREE.PointCloud(sphere,pointMaterial);
+		scene.add(pointMesh);
+
 	}
+
 }
 
 function onHull() {
@@ -194,6 +242,7 @@ function updateScene() {
 	}
 }
 
+
 function updateIncremental() {
 	if (geometry == null) {
 		return;
@@ -205,6 +254,12 @@ function updateIncremental() {
 
 	if (time - lastTime > interval) {
 
+       if (counter != 0)
+        {
+        	counter--;
+        	lastTime = time;
+            return;
+        }
 		trl = meta[0];
 		actions = meta[1];
 		if (var1 >= actions.length) {
@@ -216,21 +271,164 @@ function updateIncremental() {
 		if (var1 != 0) {
 			addCount -= actions[var1 - 1][1];
 		}
-		if (addCount + removeCount <= var2) {
+		if (addCount + removeCount <= var2) 
+		{
+			
+           //添完成所有面，获得刚才添加的面,将地平线删除
+         
 			var2 = 0;
+			if (var1 >=1) 
+			{ 
+			  
+				
+				for(var i = actions[var1-1][1] ; i < actions[var1][1]; i++) 
+	            {
+	          		 removeFromScene("incLine"+var1+i);
+                     removeFromScene("active_incFace" + i);        
+	            } 
+	             counter = 3;
+             }
+        
 			var1++;
-			stressPoint(var1 + 2);
+            
+
+		    
+			stressPoint(var1 + 2);  
+			
+			 //改变相机的位置
+           /* camera.position.x = points[var1 + 2].x;
+            camera.position.y = points[var1 + 2].y;
+            camera.position.z = points[var1 + 2].z+500;
+            camera.up.x = 0;
+            camera.up.y = 1;
+            camera.up.z = 0;
+            camera.lookAt({
+                x : 0,
+                y : 0,
+                z : 0
+            });*/
 			return;
+
 		}
-		if (var2 < removeCount) {
+
+		if (var2 < removeCount)
+		{
+			//开始删除之前把所有要删除的面变红
+			if (var2 ==0) 
+			{
+
+				var geometryMaterialActive = new THREE.MeshBasicMaterial({
+					color: 0xff0000,
+					shading: THREE.FlatShading,
+				    transparent:true,
+				    opacity:0.5
+		            	});
+
+				for (var i =0;  i<actions[var1][0].length; i++) 
+				{
+				          
+					newFace = new THREE.Geometry();
+					newFace.vertices = points;
+					var pointIds = trl[actions[var1][0][i]].points;
+					var pts = [points[pointIds[0]], points[pointIds[1]], points[pointIds[2]]];
+					var face = new THREE.Face3(pointIds[0], pointIds[1], pointIds[2]);
+					var faceNormal = (pts[1].clone().sub(pts[0])).cross(pts[2].clone().sub(pts[0]));
+					face.normal.copy(faceNormal);
+					newFace.faces.push(face);
+
+		       
+					var mesh = new THREE.Mesh(newFace, geometryMaterialActive);
+					mesh.matrixAutoUpdate = false;
+					mesh.name = "active_rmvFace" + actions[var1][0][i];
+					scene.add(mesh);
+
+				}
+			  
+               //怎么能让要删除面变红之后不要马上删除第一个该删的面？？
+
+        	 
+			}//!!开始删
+            
+
+
 			removeId = actions[var1][0][var2];
-			removeFromScene("incFace" + removeId);
-		} else {
-			var geometryMaterial = new THREE.MeshNormalMaterial({
+			removeFromScene("active_incFace" + removeId);
+			removeFromScene("active_rmvFace" + removeId);
+
+			removeFromScene("base_incFace" + removeId);	
+			removeFromScene("incFace_inface" + removeId);
+			removeFromScene("incFace_inwire" + removeId);
+		
+			
+            //removeFromScene("incLine" + removeId);
+			
+			//删除完成，添加新面之前将地平线描出
+            if (var2 == removeCount-1) 
+           {
+           	   
+           	  
+         		for(var i = actions[var1-1][1] ; i < actions[var1][1]; i++) 
+         		{
+
+				    geometry = new THREE.Geometry();
+					geometry.vertices.push(
+							new THREE.Vector3( points[trl[i].points[0]].x, points[trl[i].points[0]].y, points[trl[i].points[0]].z ),
+							new THREE.Vector3( points[trl[i].points[1]].x, points[trl[i].points[1]].y, points[trl[i].points[1]].z )
+							);
+					
+					geometry.computeLineDistances();
+
+					var object = new THREE.Line( geometry, new THREE.LineBasicMaterial( { color: 0xff0000, linewidth: 15} ), THREE.LinePieces );
+		            object.name = "incLine"+var1+i;
+
+                    objs.push(object.name);
+		            scene.add( object );
+
+                   
+
+         		}    
+             
+             	counter =2;
+             	
+            
+
+         	}
+			
+		} 
+
+
+		else 
+		{
+            
+            var geometryMaterialActive = new THREE.MeshBasicMaterial({
+					color: 0xff0000,
+					shading: THREE.FlatShading,
+				    transparent:true,
+				    opacity:0.5
+		            	});
+
+			var geometryMaterialBasic = new THREE.MeshNormalMaterial({
 				color: 0x0000ff,
-				shading: THREE.FlatShading
+				shading: THREE.FlatShading,
+				transparent:true,
+			    opacity:0.9
+				
 			});
-			//geometryMaterial.transparent
+			var geometryMaterialInFace= new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				shading: THREE.FlatShading,
+			    transparent:true,
+			    opacity:0.3
+			});
+            var geometryMaterialWireFrame =new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				shading: THREE.FlatShading,
+				wireframe:true
+			});
+
+			
+         
+
 			newFace = new THREE.Geometry();
 			newFace.vertices = points;
 			i = actions[var1 - 1][1] + var2 - removeCount;
@@ -240,16 +438,49 @@ function updateIncremental() {
 			var faceNormal = (pts[1].clone().sub(pts[0])).cross(pts[2].clone().sub(pts[0]));
 			face.normal.copy(faceNormal);
 			newFace.faces.push(face);
+
+
+            newFace1 = new THREE.Geometry();//
+			newFace1.vertices = points;//
 			face = new THREE.Face3(pointIds[0], pointIds[2], pointIds[1]);
 			faceNormal = (pts[2].clone().sub(pts[0])).cross(pts[1].clone().sub(pts[0]));
 			face.normal.copy(faceNormal);
-			newFace.faces.push(face);
-			var mesh = new THREE.Mesh(newFace, geometryMaterial);
+			newFace1.faces.push(face);//1
+
+            
+            var mesh = new THREE.Mesh(newFace, geometryMaterialBasic);
 			mesh.matrixAutoUpdate = false;
-			mesh.name = "incFace" + i;
-			objs.push(mesh.name);
+			mesh.name = "base_incFace" + i;
+
+
+			var acmesh = new THREE.Mesh(newFace, geometryMaterialActive);
+			acmesh.matrixAutoUpdate = false;
+			acmesh.name = "active_incFace" + i;
+
+            var wiremesh = new THREE.Mesh(newFace1, geometryMaterialWireFrame);//
+			wiremesh.matrixAutoUpdate = false;//
+			wiremesh.name = "incFace_inwire" + i;//
+
+            var inmesh = new THREE.Mesh(newFace1, geometryMaterialInFace);//
+			inmesh.matrixAutoUpdate = false;//
+			inmesh.name = "incFace_inface" + i;//
+         
+            
+            objs.push(mesh.name);
 			scene.add(mesh);
-		}
+
+			scene.add(acmesh);
+
+			objs.push(wiremesh.name);//
+			scene.add(wiremesh);//
+
+			objs.push(inmesh.name);//
+			scene.add(inmesh);//
+
+		
+
+        }
+
 		var2++;
 		lastTime = time;
 	}
@@ -269,11 +500,11 @@ function stressPoint(index) {
 	removeFromScene("point" + index);
 	if (index < points.length && index >= 0) {
 
-		var sphereMaterial = new THREE.MeshBasicMaterial({
+		/*var sphereMaterial = new THREE.MeshBasicMaterial({
 			color: 0xff0000,
 			opacity: 0.5,
 		});
-		var sphere = new THREE.SphereGeometry(10, 4, 4);
+		var sphere = new THREE.SphereGeometry(15, 4, 4);
 		var mesh = new THREE.Mesh(sphere, sphereMaterial);
 		mesh.position.x = points[index].x;
 		mesh.position.y = points[index].y;
@@ -281,20 +512,56 @@ function stressPoint(index) {
 		mesh.updateMatrix();
 		mesh.matrixAutoUpdate = false;
 		mesh.name = "point" + index;
-		scene.add(mesh);
+		scene.add(mesh);*/
+
+		var pointMaterial = new THREE.PointCloudMaterial({
+			color: 0xff0000,
+			size: 20.0,
+			sizeAttenuation: true
+		});//
+
+		//var sphere = new THREE.SphereGeometry(5, 4, 4)
+        var sphere = new THREE.Geometry();
+		
+		sphere.vertices.push(
+              new THREE.Vector3( points[index].x, points[index].y, points[index].z)
+				);
+	
+		var pointMesh = new THREE.PointCloud(sphere,pointMaterial);
+		pointMesh.name = "point" + index;
+		scene.add(pointMesh);
+
 		stressId = index;
+
 	}
 }
 
 function unstressPoint(index) {
 	removeFromScene("point" + index);
 	if (index < points.length && index >= 0) {
-		var sphereMaterial = new THREE.MeshBasicMaterial({
+		
+		var pointMaterial = new THREE.PointCloudMaterial({
+			color: 0xffff00,
+			size: 8.0,
+			sizeAttenuation: true
+		});//
+
+        var sphere = new THREE.Geometry();
+		
+		sphere.vertices.push(
+              new THREE.Vector3( points[index].x, points[index].y, points[index].z)
+				);
+	
+	    var pointMesh = new THREE.PointCloud(sphere,pointMaterial);
+		pointMesh.name = "point" + index;
+		scene.add(pointMesh);
+		
+		/*var sphereMaterial = new THREE.MeshBasicMaterial({
 			color: 0xffff00,
 			opacity: 0.5,
 		});
 		var sphere = new THREE.SphereGeometry(5, 4, 4);
-
+       
 		var mesh = new THREE.Mesh(sphere, sphereMaterial);
 		mesh.position.x = points[index].x;
 		mesh.position.y = points[index].y;
@@ -302,9 +569,11 @@ function unstressPoint(index) {
 		mesh.updateMatrix();
 		mesh.matrixAutoUpdate = false;
 		mesh.name = "point" + index;
-		scene.add(mesh);
+		scene.add(mesh);*/
 	}
 }
+
+
 
 function removeFaces() {
 	lastTime = new Date().getTime();
