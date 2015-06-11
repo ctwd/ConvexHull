@@ -56,16 +56,16 @@ function sort(vector, l, r) {
 	var lp = l + 1;
 	var rp = r;
 	while (lp < rp) {
-		while (lp < rp && vector[lp].x <= pin.x) {
+		while (lp < rp && vector[lp].x >= pin.x) {
 			lp++;
 		}
-		while (rp > lp && vector[rp].x > pin.x) {
+		while (rp > lp && vector[rp].x < pin.x) {
 			rp--;
 		}
 		swap(vector, lp, rp);
 	}
 	pinpos = lp;
-	if (vector[lp].x > pin.x) {
+	if (vector[lp].x < pin.x) {
 		pinpos = lp - 1;
 	} else {
 		pinpos = lp;

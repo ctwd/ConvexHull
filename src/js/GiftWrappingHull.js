@@ -3,10 +3,10 @@ GiftWrappingHullGeometry = function(pointNumber) {
 	this.type = 'GiftWrappingHullGeometry';
 	var scope = this;
 
-	for (var i = 0; i < pointNumber; i++) {
-		vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
-		scope.vertices.push(vertex);
-	};
+	// for (var i = 0; i < pointNumber; i++) {
+	// 	vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+	// 	scope.vertices.push(vertex);
+	// };
 
 	this.mergeVertices();
 
@@ -124,21 +124,21 @@ GiftWrappingHullGeometry = function(pointNumber) {
 							var triangles = pointList[indexNext].triangles[k];
 							for (var l = 0; l < 3; l++) {
 								if (triangles.points[l] == pointIds[(j + 2) % 3]) {
-									triangle.neighbors[1] = triangles;
+									triangle.neighbors[1] = triangles.index;
 									if (triangles.points[(l + 1) % 3] == indexNext) {
-										triangles.neighbors[(l + 2) % 3] = triangle;
+										triangles.neighbors[(l + 2) % 3] = triangle.index;
 									} else {
-										triangles.neighbors[(l + 2) % 3] = triangle;
+										triangles.neighbors[(l + 1) % 3] = triangle.index;
 									}
-									break;
+									// break;
 								} else if (triangles.points[l] == pointIds[(j + 1) % 3]) {
-									triangle.neighbors[0] = triangles;
+									triangle.neighbors[0] = triangles.index;
 									if (triangles.points[(l + 1) % 3] == indexNext) {
-										triangles.neighbors[(l + 2) % 3] = triangle;
+										triangles.neighbors[(l + 2) % 3] = triangle.index;
 									} else {
-										triangles.neighbors[(l + 2) % 3] = triangle;
+										triangles.neighbors[(l + 1) % 3] = triangle.index;
 									}
-									break;
+									// break;
 								}
 							}
 						}
@@ -163,6 +163,7 @@ GiftWrappingHullGeometry = function(pointNumber) {
 			}
 		}
 		scope.mergeVertices();
+		return [triangleList];
 	}
 }
 

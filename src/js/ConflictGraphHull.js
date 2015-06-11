@@ -2,19 +2,15 @@ ConflictGraphHullGeometry = function(pointNumber) {
 	THREE.Geometry.call(this)
 	this.type = 'ConflictGraphHullGeometry';
 	var scope = this;
-	for (var i = 0; i < pointNumber; i++) {
-		vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
-		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
-		scope.vertices.push(vertex);
-	};
+	// for (var i = 0; i < pointNumber; i++) {
+	// 	vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+	// 	//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
+	// 	scope.vertices.push(vertex);
+	// };
 
 	this.mergeVertices();
 
 	scope.hull = function() {
-		var delta = 1e-9;
-		var pointList = [];
-		var triangleList = [];
-
 		isVisible = function(triangleId, pointId) {
 			var triangle = triangleList[triangleId];
 			var point = pointList[pointId];
@@ -65,18 +61,16 @@ ConflictGraphHullGeometry = function(pointNumber) {
 						}
 					}
 				}
-				// if (nextEdges.length == 2) {
-				// 	endPoint = triangle.points[(edges[edges.length - 1][1] + 2) % 3];
-				// 	startPoint = triangleList[nextEdges[0][0]].points[(nextEdges[0][1] + 1) % 3];
-				// 	if (endPoint != startPoint) {
-				// 		swap(nextEdges, 0, 1);
-				// 	}
-				// }
 				return nextEdges;
 			} else {
 				return [];
 			}
 		}
+
+		var delta = 1e-9;
+		var pointList = [];
+		var triangleList = [];
+		var steps = [];
 
 		if (scope.vertices.length < 4) {
 			return;
@@ -155,19 +149,12 @@ ConflictGraphHullGeometry = function(pointNumber) {
 			}
 		}
 
-		// pointList[0].triangles.push(triangleList[0]);
-		// pointList[0].triangles.push(triangleList[2]);
-		// pointList[0].triangles.push(triangleList[3]);
-		// pointList[1].triangles.push(triangleList[0]);
-		// pointList[1].triangles.push(triangleList[1]);
-		// pointList[1].triangles.push(triangleList[3]);
-		// pointList[2].triangles.push(triangleList[0]);
-		// pointList[2].triangles.push(triangleList[1]);
-		// pointList[2].triangles.push(triangleList[2]);
-		// pointList[3].triangles.push(triangleList[1]);
-		// pointList[3].triangles.push(triangleList[2]);
-		// pointList[3].triangles.push(triangleList[3]);
-
+		steps.push([
+			[], 0
+		]);
+		steps.push([
+			[], 4
+		]);
 
 		for (var i = 0; i < 4; i++) {
 			triangleList[i].conflicts = [];
@@ -279,6 +266,7 @@ ConflictGraphHullGeometry = function(pointNumber) {
 				triangleList[j + offset].neighbors[0] = offset + (j + 1) % edges.length;
 				triangleList[j + offset].neighbors[1] = offset + (j - 1 + edges.length) % edges.length;
 			}
+			steps.push([faceToRemove, triangleList.length]);
 		}
 
 		for (var i = 0; i < triangleList.length; i++) {
@@ -292,6 +280,11 @@ ConflictGraphHullGeometry = function(pointNumber) {
 			}
 		}
 		scope.mergeVertices();
+		var totalMoves = triangleList.length;
+		for (var i = 0; i < steps.length; i++) {
+			totalMoves += steps[i][0].length;
+		}
+		return [triangleList, steps, totalMoves, 0]; 
 	}
 }
 

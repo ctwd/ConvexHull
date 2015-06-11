@@ -63,15 +63,59 @@
 
 			var geometry, meta;
 
-			var var1, var2, lastTime, objs = [], stressId = -1;
+			var var1, var2, lastTime, objs = [];
+			
+			var progressing = false;
+
+			var MovingFace1, MovingFace2;
+
+			var nextDcInterval = 300;
 
 			var hullValid;
 
 			var counter =0;
 
+			var geometryMaterial = new THREE.MeshNormalMaterial({
+				color: 0x0000ff,
+				shading: THREE.FlatShading,
+			});
+			var pointMaterial = new THREE.PointCloudMaterial({
+				color: 0xffff00,
+				size: 8.0,
+				sizeAttenuation: true
+			});
+			var pointMaterialRed = new THREE.PointCloudMaterial({
+				color: 0xff0000,
+				size: 20.0,
+				sizeAttenuation: true
+			}); //
+			var geometryMaterialActive = new THREE.MeshBasicMaterial({
+				color: 0xff0000,
+				shading: THREE.FlatShading,
+				transparent: true,
+				opacity: 0.5
+			});
+			var geometryMaterialBasic = new THREE.MeshNormalMaterial({
+				color: 0x0000ff,
+				shading: THREE.FlatShading,
+				transparent: true,
+				opacity: 0.9
+			});
+			var geometryMaterialInFace = new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				shading: THREE.FlatShading,
+				transparent: true,
+				opacity: 0.3
+			});
+			var geometryMaterialWireFrame = new THREE.MeshBasicMaterial({
+				color: 0xffffff,
+				shading: THREE.FlatShading,
+				wireframe: true
+			});
 			init();
 
 			animate();
+
 
 			function init() {
 				
@@ -111,11 +155,24 @@
 
 			function onWindowResize() {
 
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+				if(camera.type == 'OrthographicCamera') {
+					this.left = window.innerWidth/-1.8;
+					this.right = window.innerWidth/1.8;
+					this.top = window.innerHeight/1.8;
+					this.bottom = window.innerHeight/-1.8;
 
-				renderer.setSize( window.innerWidth, window.innerHeight );
+					// if(window.innerWidth < window.innerHeight) {
+					// 	renderer.setSize(window.innerWidth,window.innerWidth)
+					// } else {
+					// 	renderer.setSize(window.innerHeight,window.innerHeight)
 
+					// }
+					renderer.setSize( window.innerWidth, window.innerHeight );
+				} else {
+					camera.aspect = window.innerWidth / window.innerHeight;
+					camera.updateProjectionMatrix();
+					renderer.setSize( window.innerWidth, window.innerHeight );
+				}
 				controls.handleResize();
 
 				render();
@@ -126,22 +183,24 @@
 
 				requestAnimationFrame( animate );
 				controls.update();
+
+				stats.update();
 				render();
 
 			}
 
 			function render() {
-				if (!playConfig.animation) {
-					fillFinalGeometry();
-				} else if (playConfig.paused) {
-					stayPaused();
-				} else {
-					updateScene();
+				if(!progressing){
+					if (!playConfig.animation) {
+						fillFinalGeometry();
+					} else if (playConfig.paused) {
+						stayPaused();
+					} else {
+						updateScene();
+					}
 				}
 				renderer.render(scene, camera);
-				stats.update();
 			}
-
 
 		</script>
 

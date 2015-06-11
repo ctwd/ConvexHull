@@ -188,8 +188,11 @@ IncrementalHullGeometry = function(pointNumber) {
 		}
 
 		scope.mergeVertices();
-
-		return [triangleList, steps];
+		var totalMoves = triangleList.length;
+		for (var i = 0; i < steps.length; i++) {
+			totalMoves += steps[i][0].length;
+		}
+		return [triangleList, steps, totalMoves, 0];
 	}
 }
 
