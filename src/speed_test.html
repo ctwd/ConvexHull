@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+
+		<script src="build/three.js"></script>
+
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/libs/stats.min.js"></script>
+
+		<script src="js/Detector.js"></script>
+
+		<script src="js/utils.js"></script>
+		<script src="js/IncrementalHull.js"></script>
+		<script src="js/GiftWrappingHull.js"></script>
+		<script src="js/ConflictGraphHull.js"></script>	
+		<script src="js/DivideConquerHull.js"></script>	
+		<script>
+		
+			counts = [100,1000,5000,10000]
+			repet = 1;
+			result = [];
+			ir = [];
+			gw = [];
+			ct = [];
+			dc = [];
+			for (var i = 0; i < counts.length; i++) {
+				var time = 0;
+				for(var j = 0; j < repet; j++) {
+					var g = new ConflictGraphHullGeometry();
+					g.vertices = initPoints(counts[i], true);
+					g.mergeVertices();
+					start = new Date().getTime();
+					g.hull();
+					end = new Date().getTime();
+					time += (end - start);
+				}
+				time /= repet;
+				ct.push(time);
+			}
+			alert(ct);
+
+			for (var i = 0; i < counts.length; i++) {
+				var time = 0;
+				for(var j = 0; j < repet; j++) {
+					var g = new DivideConquerHullGeometry();
+					g.vertices = initPoints(counts[i], true);
+					g.mergeVertices();
+					start = new Date().getTime();
+					g.hull();
+					end = new Date().getTime();
+					time += (end - start);
+				}
+				time /= repet;
+				dc.push(time);
+			}
+			alert(dc);
+
+			result.push(ir, gw, ct, dc);
+			for (var i = 0; i < counts.length; i++) {
+				var time = 0;
+				for(var j = 0; j < repet; j++) {
+					var g = new IncrementalHullGeometry();
+					g.vertices = initPoints(counts[i]);
+					g.mergeVertices();
+					start = new Date().getTime();
+					g.hull();
+					end = new Date().getTime();
+					time += (end - start);
+				}
+				time /= repet;
+				ir.push(time);
+			}
+			alert(ir);
+
+			for (var i = 0; i < counts.length; i++) {
+				var time = 0;
+				for(var j = 0; j < repet; j++) {
+					var g = new GiftWrappingHullGeometry();
+					g.vertices = initPoints(counts[i]);
+					g.mergeVertices();
+					start = new Date().getTime();
+					g.hull();
+					end = new Date().getTime();
+					time += (end - start);
+				}
+				time /= repet;
+				gw.push(time);
+			}
+			alert(gw);
+		</script>
+</html>

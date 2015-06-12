@@ -32,7 +32,7 @@ var Triangle = function(_a, _b, _c, _index) {
 	}
 }
 
-function initPoints(count) {
+function initPoints(count, s) {
 	var vertices = [];
 	for (var i = 0; i < count; i++) {
 		var vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
@@ -44,8 +44,13 @@ function initPoints(count) {
 		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
 		vertices.push(vertex);
 	}
-	sort(vertices, 0, vertices.length - 1);
-	return vertices;
+	
+	if(s) {
+		return vertices;
+	} else {
+		sort(vertices, 0, vertices.length - 1);
+		return vertices;
+	}
 }
 
 function sort(vector, l, r) {
@@ -128,21 +133,7 @@ makeTextFile = function(text) {
                 return textFile;
               };
 
-function initPoints(count) {
-	var vertices = [];
-	for (var i = 0; i < count; i++) {
-		var vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
-		var dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
-		while (dis > 500 * 500) {
-			vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
-			dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
-		}
-		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
-		vertices.push(vertex);
-	}
-	sort(vertices, 0, vertices.length - 1);
-	return vertices;
-}
+
 
 function loadFile (name,type) 
 {
