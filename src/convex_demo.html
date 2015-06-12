@@ -39,6 +39,9 @@
 		<script src="js/libs/stats.min.js"></script>
 		<script src="js/Detector.js"></script>
 		<script src='js/libs/dat.gui.js'></script>
+        
+        <script type="text/javascript" src="js/libs/jquery-1.11.3.min.js"></script>
+        <script src="js/libs/STLLoader.js"></script>
 
 
 		<script src="js/utils.js"></script>
@@ -48,6 +51,15 @@
 		<script src="js/DivideConquerHull.js"></script>
 		<script src="js/SimpleGeometry.js"></script>
 		<script src="js/Controls.js"></script>
+         
+         <!关于文件操作的隐式控件>
+      
+        <form id="submit_form" method="post" action="upload_file.php" target="exec_target" enctype="multipart/form-data" style="display:none;">
+			<input type="file" name="upload_file" id="upload_file">	
+		</form>
+		<iframe id="exec_target" name="exec_target" style="display:none;"></iframe>	
+	    
+	     <div id = "adddiv" style="display:none;" ></div>
 
 		<script>
 
@@ -146,8 +158,7 @@
 				controls = new THREE.TrackballControls( camera, renderer.domElement );
 				controls.dynamicDampingFactor = 0.3;
 				controls.addEventListener( 'change', render );
-				// controls.noZoom = true;
-				// controls.noPan = true;
+			
 
 				window.addEventListener( 'resize', onWindowResize, false );
 				

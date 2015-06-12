@@ -94,3 +94,132 @@ var rand = (function() {
 		return Math.ceil(rnd(seed) * number);
 	};
 })();
+
+
+function showPoints()
+{
+   var sphere = new THREE.Geometry();
+		for (var i = 0; i < points.length; i++) {
+			sphere.vertices.push(
+				points[i].clone()
+	
+			);
+		
+		}
+		var pointMesh = new THREE.PointCloud(sphere, pointMaterial);
+		pointMesh.name = "pointMesh";
+		scene.add(pointMesh);
+
+}
+
+makeTextFile = function(text) {
+                var textFile;
+                var data = new Blob([text], {type: 'text/plain'});
+                
+                // If we are replacing a previously generated file we need to
+                // manually revoke the object URL to avoid memory leaks.
+                if (textFile !== null) {
+                  window.URL.revokeObjectURL(textFile);
+                }
+
+                textFile = window.URL.createObjectURL(data);
+
+                // returns a URL you can use as a href
+                return textFile;
+              };
+
+function initPoints(count) {
+	var vertices = [];
+	for (var i = 0; i < count; i++) {
+		var vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+		var dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		while (dis > 500 * 500) {
+			vertex = new THREE.Vector3(Math.random() * 1000 - 500, Math.random() * 1000 - 500, Math.random() * 1000 - 500);
+			dis = vertex.x * vertex.x + vertex.y * vertex.y + vertex.z * vertex.z;
+		}
+		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
+		vertices.push(vertex);
+	}
+	sort(vertices, 0, vertices.length - 1);
+	return vertices;
+}
+
+function loadFile (name,type) 
+{
+	 if (type == "stl") 
+	 {
+                     
+	        	var filePath = "upload/" + name;
+	            var loader = new THREE.STLLoader();
+	            loader.load( filePath, function ( loadgeometry ) {
+                        
+                loadgeometry.computeBoundingBox ();
+                loadgeometry.dynamic = true;
+
+
+                var minBox = loadgeometry.boundingBox.min;
+                var maxBox = loadgeometry.boundingBox.max;
+				
+				var centerObj = new THREE.Vector3();
+				centerObj.addVectors (minBox,maxBox);
+				centerObj.divideScalar (2);
+				//所有的坐标都应减centerObj
+
+			    //最大的到800
+                var obgX = maxBox.x - minBox.x;
+                var obgY = maxBox.y - minBox.y;
+                var obgZ = maxBox.z - minBox.z;
+                
+                var max = obgX;
+                if (max < obgY) {max = obgY;}
+                if (max < obgZ) {max = obgZ;}
+                //所有坐标都在减后 /max *800
+                max = 800/max;
+
+                for (var i = 0; i < loadgeometry.vertices.length; i++) 
+                {
+                	loadgeometry.vertices[i].sub(centerObj);
+                	loadgeometry.vertices[i].multiplyScalar ( max );
+                	points.push(loadgeometry.vertices[i]);
+
+                }
+                //sort(points, 0, points.length - 1);
+
+                loadgeometry.verticesNeedUpdate = true;                                          
+                var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialBasic );
+                loadmesh.name ="loadSTL";
+                scene.add( loadmesh );    
+                showPoints();
+
+	            } );
+
+          }
+
+         else if(type == "txt")
+         {	
+	        $.post("read_file.php",
+	          {
+	            name:name,
+	          
+	          },
+	          function(data,status){
+	          	 ch = new Array;
+				 ch = data.split(",");
+				 if (ch.length%3 ==0 ) 
+				  {
+				  	for(i=0;i<=ch.length-3;i+=2)
+				  	{
+
+				  	  var vertex = new THREE.Vector3(ch[i], ch[i+1], ch[i+2]);
+				  	  points.push(vertex);
+				  	}
+                   // sort(points, 0, points.length - 1);
+                    showPoints();			  	
+				  } 	
+	            else
+				  {alert("初始化失败，点集信息不足");
+				return;}
+		
+	          });
+         }   
+}

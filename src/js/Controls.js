@@ -1,10 +1,14 @@
-var hullConfig = {
-	clear: onClear(),
-	init: onInit(),
+var ioConfig = {
+   clear: onClear(),
+   init: onInit(),
+   pointCount: 50,
+   openFile:onOpenFile(),
+   saveFile:onSavePoints(),
+};
+
+var hullConfig = {	
 	type: "分治法",
 	convexHull: onHull(),
-	pointCount: 50,
-	openSTL: onOpenFile(),
 };
 
 var playConfig = {
@@ -26,19 +30,62 @@ var authorConfig = {
 	author2: "高莹",
 };
 
+$(document).ready(
+	function()
+	{
+		$("#upload_file").change(function(){
+			if($("#upload_file").val() != '') $("#submit_form").submit();
+		});
+
+		$("#exec_target").load(function(){
+			var data = $(window.frames['exec_target'].document.body).find("textarea").html();
+			if(data != null)
+			{
+				  alert(data.replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
+				  var filename = $("#upload_file").val();
+                  $("#upload_file").val('');
+
+                  var index = filename.lastIndexOf('\\');
+                  var name = filename.substring(index+1);
+
+			      if (name == null || name=="") 
+			      {
+			            alert("请先选择上传点集文件");
+			            return;
+			       }
+			        
+			       index = filename.lastIndexOf('.');
+			       var type =  filename.substring(index+1);			        
+	
+	               onClear();
+	               loadFile(name,type);
+                                     
+			 }//end if(data !=null )
+		});
+   }
+);
+
+
+
+
+
 function setupGUI() {
 	gui = new dat.GUI();
 
-	var hullGui = gui.addFolder("凸包控制");
+    var ioGUI = gui.addFolder("点集操作");
+	var hullGui = gui.addFolder("算法控制");
 	var playGui = gui.addFolder("播放控制");
 	var displayGui = gui.addFolder("显示控制");
 	var authorGui = gui.addFolder("关于作者");
 
-	hullGui.add(hullConfig, "pointCount").min(4).max(100).step(1).name("点数").onFinishChange();
-	hullGui.add(hullConfig, "clear").name("清空");
-	hullGui.add(hullConfig, "init").name("初始化点集");
-	hullGui.add(hullConfig, "openSTL").name("打开文件"); //
-	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法"]).name("算法类型").onChange(onType())
+	ioGUI.add(ioConfig, "pointCount").min(4).max(100).step(1).name("随机点数").onFinishChange();
+    ioGUI.add(ioConfig, "openFile").name("选择文件");
+    ioGUI.add(ioConfig, "init").name("初始化点集");
+    ioGUI.add(ioConfig, "clear").name("清空");
+    ioGUI.add(ioConfig, "saveFile").name("保存点集");
+
+
+	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法"]).name("算法类型").onChange(onType());
 	hullGui.add(hullConfig, "convexHull").name("生成凸包");
 
 	playGui.add(playConfig, "animation").name("播放动画").onChange(onAnimation());
@@ -52,10 +99,10 @@ function setupGUI() {
 	displayGui.add(displayConfig, "orthographicCamera").name("正交投影").listen().onFinishChange(onOrthographicCamera);
 
 	authorGui.add(authorConfig, "author1").name("清软研140");
-	authorGui.add(authorConfig, "author2").name("清软研141");
+	authorGui.add(authorConfig, "author2").name("清软研143");
 
-
-	hullGui.open();
+    ioGUI.open();
+ 	hullGui.open();
 	playGui.open();
 	displayGui.open();
 	authorGui.open();
@@ -64,31 +111,53 @@ function setupGUI() {
 	gui.open();
 }
 
+
+
+
+
+
 function onOpenFile() {
-	return function() {
-		try {
-			var Message = "Please select the folder path."; //选择框提示信息
-			var Shell = new ActiveXObject("Shell.Application");
-			var Folder = Shell.BrowseForFolder(0, Message, 0x0040, 0x11); //起始目录为：我的电脑
-			//var Folder = Shell.BrowseForFolder(0,Message,0); //起始目录为：桌面
-			if (Folder != null) {
-				Folder = Folder.items(); // 返回 FolderItems 对象
-				Folder = Folder.item(); // 返回 Folderitem 对象
-				Folder = Folder.Path; // 返回路径
-				if (Folder.charAt(Folder.length - 1) != "\\") {
-					Folder = Folder + "\\";
-				}
-				return Folder;
-			}
-		} catch (e) {
-			alert(e.message);
-		}
+	return function() 
+	{
+	    var element = document.getElementById("upload_file");
+        element.click();
 	}
+}
+
+function onSavePoints(){
+   
+   return function()
+   {
+   	  if (points.length == 0) {
+			alert("请先初始化点集");
+			return;
+		}
+        var textFile = null;
+         var saveContent = "";
+         for (var i = 0; i < points.length-1; i++) 
+		 {
+			saveContent = saveContent + points[i].x + "," + points[i].y + "," + points[i].z + ",";
+	 	 }
+
+         saveContent = saveContent + points[points.length-1].x + "," + points[points.length-1].y + "," + points[points.length-1].z ;
+
+         textFile = makeTextFile(saveContent);
+
+         $("#adddiv").empty();
+      
+         var cc = "<a id=\"linkdown\"  href=\"" + textFile + "\" download=\"data.txt\">下载</a>";
+         $("#adddiv").append(cc);
+         
+         var element = document.getElementById("linkdown");
+         element.click();
+   }
+
 }
 
 function onClear() {
 	return function() {
 		removeFromScene("pointMesh");
+		removeFromScene("loadSTL");
 		removeFinalHull();
 		points = [];
 		geometry = null;
@@ -116,33 +185,11 @@ function onAnimation() {
 
 function onInit() {
 	return function() {
-		onClear()();
-		points = initPoints(hullConfig.pointCount);
-		//随机初始化点集显示   
+		onClear();
+		points = initPoints(ioConfig.pointCount);
+		showPoints();
 
-		// var sphereMaterial = new THREE.MeshBasicMaterial({
-		// 	color: 0xffff00,
-		// 	opacity: 0.5,
-		// });
-		//var sphere = new THREE.SphereGeometry(5, 4, 4)
-		var sphere = new THREE.Geometry();
-		for (var i = 0; i < points.length; i++) {
-			sphere.vertices.push(
-				points[i].clone()
-				// new THREE.Vector3(points[i].x, points[i].y, points[i].z)
-			);
-			// var mesh = new THREE.Mesh(sphere, sphereMaterial);
-			// mesh.position.x = points[i].x;
-			// mesh.position.y = points[i].y;
-			// mesh.position.z = points[i].z;
-			// mesh.updateMatrix();
-			// mesh.matrixAutoUpdate = false;
-			// mesh.name = "point" + i;
-			// scene.add(mesh);
-		}
-		var pointMesh = new THREE.PointCloud(sphere, pointMaterial);
-		pointMesh.name = "pointMesh";
-		scene.add(pointMesh);
+		
 	}
 
 }
@@ -154,6 +201,7 @@ function onHull() {
 			alert("请先初始化点集");
 			return;
 		}
+		//removeFromScene("loadSTL");
 		removeFaces();
 		switch (hullConfig.type) {
 			case "增量法":
