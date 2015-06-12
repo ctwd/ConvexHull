@@ -138,8 +138,6 @@ makeTextFile = function(text) {
 function loadFile (name,type) 
 {
 	
-	 
-	 STLFileName = name;
 	 if (type == "stl") 
 	 {
                      
@@ -170,23 +168,15 @@ function loadFile (name,type)
                 //所有坐标都在减后 /max *800
                 max = 800/max;
 
-                if (points.length == 0) 
+                
+            	for (var i = 0; i < loadgeometry.vertices.length; i++) 
                 {
-                	for (var i = 0; i < loadgeometry.vertices.length; i++) 
-                    {
-	                	loadgeometry.vertices[i].sub(centerObj);
-	                	loadgeometry.vertices[i].multiplyScalar ( max );        
-	                	points.push(loadgeometry.vertices[i]);
-                    }
+                	loadgeometry.vertices[i].sub(centerObj);
+                	loadgeometry.vertices[i].multiplyScalar ( max );        
+                	points.push(loadgeometry.vertices[i]);
                 }
-                else
-                {
-	                for (var i = 0; i < loadgeometry.vertices.length; i++) 
-	                {
-	                	loadgeometry.vertices[i].sub(centerObj);
-	                	loadgeometry.vertices[i].multiplyScalar ( max );        
-	                }
-                }
+          
+	             
                 sort(points, 0, points.length - 1);
 
                 loadgeometry.verticesNeedUpdate = true;                                          
@@ -226,4 +216,53 @@ function loadFile (name,type)
 		
 	          });
          }   
+}
+
+
+function loadOldSTLFile (name) 
+{
+    
+
+    var filePath = "upload/" + name;
+    var loader = new THREE.STLLoader();
+    loader.load( filePath, function ( loadgeometry ) {
+            
+    loadgeometry.computeBoundingBox ();
+    loadgeometry.dynamic = true;
+
+
+    var minBox = loadgeometry.boundingBox.min;
+    var maxBox = loadgeometry.boundingBox.max;
+	
+	var centerObj = new THREE.Vector3();
+	centerObj.addVectors (minBox,maxBox);
+	centerObj.divideScalar (2);
+	//所有的坐标都应减centerObj
+
+    //最大的到800
+    var obgX = maxBox.x - minBox.x;
+    var obgY = maxBox.y - minBox.y;
+    var obgZ = maxBox.z - minBox.z;
+    
+    var max = obgX;
+    if (max < obgY) {max = obgY;}
+    if (max < obgZ) {max = obgZ;}
+    //所有坐标都在减后 /max *800
+    max = 800/max;
+
+    
+	for (var i = 0; i < loadgeometry.vertices.length; i++) 
+    {
+    	loadgeometry.vertices[i].sub(centerObj);
+    	loadgeometry.vertices[i].multiplyScalar ( max );        
+    }
+    sort(points, 0, points.length - 1);
+
+    loadgeometry.verticesNeedUpdate = true;                                          
+    var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialLoadMesh );
+    loadmesh.name ="loadSTL";
+    scene.add( loadmesh );   
+    } );
+
+   
 }

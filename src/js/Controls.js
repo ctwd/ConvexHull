@@ -43,11 +43,11 @@ $(document).ready(
 			var data = $(window.frames['exec_target'].document.body).find("textarea").html();
 			if(data != null)
 			{
-			
-                  onClear()();
+			      onClear()();
+               
 				  alert(data.replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
 				  var filename = $("#upload_file").val();
-				 
+				  
                   $("#upload_file").val('');
 
                   var index = filename.lastIndexOf('\\');
@@ -127,7 +127,7 @@ function onShowSTLMesh()
     	removeFromScene("loadSTL");
     	 if (STLFileName == null || STLFileName=="") 
     	 	return;
-        loadFile(STLFileName,"stl");
+    	 loadOldSTLFile (STLFileName);
     }
     else
     {
@@ -139,6 +139,9 @@ function onShowSTLMesh()
 function onOpenFile() {
 	return function() 
 	{
+
+		onClear()();
+		displayConfig.showSTLMesh = true;
 	    var element = document.getElementById("upload_file");
         element.click();
 	}
