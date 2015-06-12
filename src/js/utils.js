@@ -44,8 +44,8 @@ function initPoints(count, s) {
 		//vertex = new THREE.Vector3(rand(1000) - 500, rand(1000) - 500, rand(1000) - 500);
 		vertices.push(vertex);
 	}
-	
-	if(s) {
+
+	if (s) {
 		return vertices;
 	} else {
 		sort(vertices, 0, vertices.length - 1);
@@ -101,168 +101,179 @@ var rand = (function() {
 })();
 
 
-function showPoints()
-{
-   var sphere = new THREE.Geometry();
-		for (var i = 0; i < points.length; i++) {
-			sphere.vertices.push(
-				points[i].clone()
-	
-			);
-		
-		}
-		var pointMesh = new THREE.PointCloud(sphere, pointMaterial);
-		pointMesh.name = "pointMesh";
-		scene.add(pointMesh);
+function showPoints() {
+	var sphere = new THREE.Geometry();
+	for (var i = 0; i < points.length; i++) {
+		sphere.vertices.push(
+			points[i].clone()
+
+		);
+
+	}
+	var pointMesh = new THREE.PointCloud(sphere, pointMaterial);
+	pointMesh.name = "pointMesh";
+	scene.add(pointMesh);
 
 }
 
 makeTextFile = function(text) {
-                var textFile;
-                var data = new Blob([text], {type: 'text/plain'});
-                
-                // If we are replacing a previously generated file we need to
-                // manually revoke the object URL to avoid memory leaks.
-                if (textFile !== null) {
-                  window.URL.revokeObjectURL(textFile);
-                }
+	var textFile;
+	var data = new Blob([text], {
+		type: 'text/plain'
+	});
 
-                textFile = window.URL.createObjectURL(data);
+	// If we are replacing a previously generated file we need to
+	// manually revoke the object URL to avoid memory leaks.
+	if (textFile !== null) {
+		window.URL.revokeObjectURL(textFile);
+	}
 
-                // returns a URL you can use as a href
-                return textFile;
-              };
+	textFile = window.URL.createObjectURL(data);
+
+	// returns a URL you can use as a href
+	return textFile;
+};
+
+function noise(vertex) {
+	return vertex.clone().add(new THREE.Vector3(Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1))
+}
+
+function loadFile(name, type) {
+
+	if (type == "stl") {
+
+		var filePath = "upload/" + name;
+		var loader = new THREE.STLLoader();
+		loader.load(filePath, function(loadgeometry) {
+
+			loadgeometry.computeBoundingBox();
+			loadgeometry.dynamic = true;
 
 
+			var minBox = loadgeometry.boundingBox.min;
+			var maxBox = loadgeometry.boundingBox.max;
 
-function loadFile (name,type) 
-{
-	
-	 if (type == "stl") 
-	 {
-                     
-	        	var filePath = "upload/" + name;
-	            var loader = new THREE.STLLoader();
-	            loader.load( filePath, function ( loadgeometry ) {
-                        
-                loadgeometry.computeBoundingBox ();
-                loadgeometry.dynamic = true;
+			var centerObj = new THREE.Vector3();
+			centerObj.addVectors(minBox, maxBox);
+			centerObj.divideScalar(2);
+			//所有的坐标都应减centerObj
+
+			//最大的到800
+			var obgX = maxBox.x - minBox.x;
+			var obgY = maxBox.y - minBox.y;
+			var obgZ = maxBox.z - minBox.z;
+
+			var max = obgX;
+			if (max < obgY) {
+				max = obgY;
+			}
+			if (max < obgZ) {
+				max = obgZ;
+			}
+			//所有坐标都在减后 /max *800
+			max = 800 / max;
 
 
-                var minBox = loadgeometry.boundingBox.min;
-                var maxBox = loadgeometry.boundingBox.max;
-				
-				var centerObj = new THREE.Vector3();
-				centerObj.addVectors (minBox,maxBox);
-				centerObj.divideScalar (2);
-				//所有的坐标都应减centerObj
+			for (var i = 0; i < loadgeometry.vertices.length; i++) {
+				loadgeometry.vertices[i].sub(centerObj);
+				loadgeometry.vertices[i].multiplyScalar(max);
+				points.push(noise(loadgeometry.vertices[i]));
+			}
+			var g = new THREE.Geometry();
+			g.vertices = points;
+			g.mergeVertices();
+			points = g.vertices;
 
-			    //最大的到800
-                var obgX = maxBox.x - minBox.x;
-                var obgY = maxBox.y - minBox.y;
-                var obgZ = maxBox.z - minBox.z;
-                
-                var max = obgX;
-                if (max < obgY) {max = obgY;}
-                if (max < obgZ) {max = obgZ;}
-                //所有坐标都在减后 /max *800
-                max = 800/max;
+			sort(points, 0, points.length - 1);
 
-                
-            	for (var i = 0; i < loadgeometry.vertices.length; i++) 
-                {
-                	loadgeometry.vertices[i].sub(centerObj);
-                	loadgeometry.vertices[i].multiplyScalar ( max );        
-                	points.push(loadgeometry.vertices[i]);
-                }
-          
-	             
-                sort(points, 0, points.length - 1);
+			loadgeometry.verticesNeedUpdate = true;
+			var loadmesh = new THREE.Mesh(loadgeometry, geometryMaterialLoadMesh);
+			loadmesh.name = "loadSTL";
+			scene.add(loadmesh);
+			if (displayConfig.showPoint) {
+				showPoints();
+			}
+		});
 
-                loadgeometry.verticesNeedUpdate = true;                                          
-                var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialLoadMesh );
-                loadmesh.name ="loadSTL";
-                scene.add( loadmesh );    
-                showPoints();
+	} else if (type == "txt") {
+		$.post("read_file.php", {
+				name: name,
 
-	            } );
+			},
+			function(data, status) {
+				ch = new Array;
+				ch = data.split(",");
+				if (ch.length % 3 == 0) {
+					for (i = 0; i <= ch.length - 3; i += 2) {
 
-          }
+						var vertex = new THREE.Vector3(ch[i], ch[i + 1], ch[i + 2]);
+						points.push(vertex);
+					}
 
-         else if(type == "txt")
-         {	
-	        $.post("read_file.php",
-	          {
-	            name:name,
-	          
-	          },
-	          function(data,status){
-	          	 ch = new Array;
-				 ch = data.split(",");
-				 if (ch.length%3 ==0 ) 
-				  {
-				  	for(i=0;i<=ch.length-3;i+=2)
-				  	{
+					var g = new THREE.Geometry();
+					g.vertices = points;
+					g.mergeVertices();
+					points = g.vertices;
+					sort(points, 0, points.length - 1);
+					if (displayConfig.showPoint) {
+						showPoints();
+					}
+				} else {
+					alert("初始化失败，点集信息不足");
+					return;
+				}
 
-				  	  var vertex = new THREE.Vector3(ch[i], ch[i+1], ch[i+2]);
-				  	  points.push(vertex);
-				  	}
-                    sort(points, 0, points.length - 1);
-                    showPoints();			  	
-				  } 	
-	            else
-				  {alert("初始化失败，点集信息不足");
-				return;}
-		
-	          });
-         }   
+			});
+	}
 }
 
 
-function loadOldSTLFile (name) 
-{
-    
-
-    var filePath = "upload/" + name;
-    var loader = new THREE.STLLoader();
-    loader.load( filePath, function ( loadgeometry ) {
-            
-    loadgeometry.computeBoundingBox ();
-    loadgeometry.dynamic = true;
+function loadOldSTLFile(name) {
 
 
-    var minBox = loadgeometry.boundingBox.min;
-    var maxBox = loadgeometry.boundingBox.max;
-	
-	var centerObj = new THREE.Vector3();
-	centerObj.addVectors (minBox,maxBox);
-	centerObj.divideScalar (2);
-	//所有的坐标都应减centerObj
+	var filePath = "upload/" + name;
+	var loader = new THREE.STLLoader();
+	loader.load(filePath, function(loadgeometry) {
 
-    //最大的到800
-    var obgX = maxBox.x - minBox.x;
-    var obgY = maxBox.y - minBox.y;
-    var obgZ = maxBox.z - minBox.z;
-    
-    var max = obgX;
-    if (max < obgY) {max = obgY;}
-    if (max < obgZ) {max = obgZ;}
-    //所有坐标都在减后 /max *800
-    max = 800/max;
+		loadgeometry.computeBoundingBox();
+		loadgeometry.dynamic = true;
 
-    
-	for (var i = 0; i < loadgeometry.vertices.length; i++) 
-    {
-    	loadgeometry.vertices[i].sub(centerObj);
-    	loadgeometry.vertices[i].multiplyScalar ( max );        
-    }
-    sort(points, 0, points.length - 1);
 
-    loadgeometry.verticesNeedUpdate = true;                                          
-    var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialLoadMesh );
-    loadmesh.name ="loadSTL";
-    scene.add( loadmesh );   
-    } );
+		var minBox = loadgeometry.boundingBox.min;
+		var maxBox = loadgeometry.boundingBox.max;
 
-   
+		var centerObj = new THREE.Vector3();
+		centerObj.addVectors(minBox, maxBox);
+		centerObj.divideScalar(2);
+		//所有的坐标都应减centerObj
+
+		//最大的到800
+		var obgX = maxBox.x - minBox.x;
+		var obgY = maxBox.y - minBox.y;
+		var obgZ = maxBox.z - minBox.z;
+
+		var max = obgX;
+		if (max < obgY) {
+			max = obgY;
+		}
+		if (max < obgZ) {
+			max = obgZ;
+		}
+		//所有坐标都在减后 /max *800
+		max = 800 / max;
+
+
+		for (var i = 0; i < loadgeometry.vertices.length; i++) {
+			loadgeometry.vertices[i].sub(centerObj);
+			loadgeometry.vertices[i].multiplyScalar(max);
+		}
+		sort(points, 0, points.length - 1);
+
+		loadgeometry.verticesNeedUpdate = true;
+		var loadmesh = new THREE.Mesh(loadgeometry, geometryMaterialLoadMesh);
+		loadmesh.name = "loadSTL";
+		scene.add(loadmesh);
+	});
+
+
 }

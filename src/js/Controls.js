@@ -1,12 +1,12 @@
 var ioConfig = {
-   clear: onClear(),
-   init: onInit(),
-   pointCount: 50,
-   openFile:onOpenFile(),
-   saveFile:onSavePoints(),
+	clear: onClear(),
+	init: onInit(),
+	pointCount: 50,
+	openFile: onOpenFile(),
+	saveFile: onSavePoints(),
 };
 
-var hullConfig = {	
+var hullConfig = {
 	type: "分治法",
 	convexHull: onHull(),
 };
@@ -33,62 +33,57 @@ var authorConfig = {
 };
 
 $(document).ready(
-	function()
-	{
-		$("#upload_file").change(function(){
-			if($("#upload_file").val() != '') $("#submit_form").submit();
+	function() {
+		$("#upload_file").change(function() {
+			if ($("#upload_file").val() != '') $("#submit_form").submit();
 		});
 
-		$("#exec_target").load(function(){
+		$("#exec_target").load(function() {
 			var data = $(window.frames['exec_target'].document.body).find("textarea").html();
-			if(data != null)
-			{
-			      onClear()();
-               
-				  alert(data.replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
-				  var filename = $("#upload_file").val();
-				  
-                  $("#upload_file").val('');
+			if (data != null) {
+				onClear()();
 
-                  var index = filename.lastIndexOf('\\');
-                  var name = filename.substring(index+1);
-                  STLFileName = name;
+				alert(data.replace(/&lt;/g, '<').replace(/&gt;/g, '>'));
+				var filename = $("#upload_file").val();
 
-			      if (name == null || name=="") 
-			      {
-			            alert("请先选择上传点集文件");
-			            return;
-			       }
-			        
-			       index = filename.lastIndexOf('.');
-			       var type =  filename.substring(index+1);			        
-	
-	               
-	               loadFile(name,type);
-                                     
-			 }//end if(data !=null )
+				$("#upload_file").val('');
+
+				var index = filename.lastIndexOf('\\');
+				var name = filename.substring(index + 1);
+				STLFileName = name;
+
+				if (name == null || name == "") {
+					alert("请先选择上传点集文件");
+					return;
+				}
+
+				index = filename.lastIndexOf('.');
+				var type = filename.substring(index + 1);
+
+
+				loadFile(name, type);
+
+			} //end if(data !=null )
 		});
-   }
+	}
 );
-
-
 
 
 
 function setupGUI() {
 	gui = new dat.GUI();
 
-    var ioGUI = gui.addFolder("点集操作");
+	var ioGUI = gui.addFolder("点集操作");
 	var hullGui = gui.addFolder("算法控制");
 	var playGui = gui.addFolder("播放控制");
 	var displayGui = gui.addFolder("显示控制");
 	var authorGui = gui.addFolder("关于作者");
 
-	ioGUI.add(ioConfig, "pointCount").min(4).max(100).step(1).name("随机点数").onFinishChange();   
+	ioGUI.add(ioConfig, "pointCount").min(4).max(100).step(1).name("随机点数").onFinishChange();
 	ioGUI.add(ioConfig, "init").name("初始化点集");
-    ioGUI.add(ioConfig, "openFile").name("选择文件");
-    ioGUI.add(ioConfig, "clear").name("清空");
-    ioGUI.add(ioConfig, "saveFile").name("保存点集");
+	ioGUI.add(ioConfig, "openFile").name("选择文件");
+	ioGUI.add(ioConfig, "clear").name("清空");
+	ioGUI.add(ioConfig, "saveFile").name("保存点集");
 
 
 	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法"]).name("算法类型").onChange(onType());
@@ -100,7 +95,7 @@ function setupGUI() {
 	playGui.add(playConfig, "progress").min(0).max(100).step(1).name("播放进度").listen().onChange(onProgressChange).onFinishChange(onProgressChanged);
 	playGui.add(playConfig, "dampFactor").min(0.0).max(0.3).step(0.01).name("转动阻尼").onFinishChange(onDampChanged);
 
-	displayGui.add(displayConfig, "showPoint").name("显示顶点").onChange();
+	displayGui.add(displayConfig, "showPoint").name("显示顶点").onChange(onShowPoint);
 	displayGui.add(displayConfig, "showSTLMesh").name("显示模型").listen().onFinishChange(onShowSTLMesh);
 	displayGui.add(displayConfig, "perspectiveCamera").name("透视投影").listen().onFinishChange(onPerspectiveCamera);
 	displayGui.add(displayConfig, "orthographicCamera").name("正交投影").listen().onFinishChange(onOrthographicCamera);
@@ -109,8 +104,8 @@ function setupGUI() {
 	authorGui.add(authorConfig, "author1").name("清软研140");
 	authorGui.add(authorConfig, "author2").name("清软研143");
 
-    ioGUI.open();
- 	hullGui.open();
+	ioGUI.open();
+	hullGui.open();
 	playGui.open();
 	displayGui.open();
 	authorGui.open();
@@ -119,61 +114,54 @@ function setupGUI() {
 	gui.open();
 }
 
-function onShowSTLMesh()
-{
+function onShowSTLMesh() {
 
-    if(displayConfig.showSTLMesh)
-    {
-    	removeFromScene("loadSTL");
-    	 if (STLFileName == null || STLFileName=="") 
-    	 	return;
-    	 loadOldSTLFile (STLFileName);
-    }
-    else
-    {
-       removeFromScene("loadSTL");
-    }
+	if (displayConfig.showSTLMesh) {
+		removeFromScene("loadSTL");
+		if (STLFileName == null || STLFileName == "")
+			return;
+		loadOldSTLFile(STLFileName);
+	} else {
+		removeFromScene("loadSTL");
+	}
 
 }
 
 function onOpenFile() {
-	return function() 
-	{
+	return function() {
 
 		onClear()();
 		displayConfig.showSTLMesh = true;
-	    var element = document.getElementById("upload_file");
-        element.click();
+		var element = document.getElementById("upload_file");
+		element.click();
 	}
 }
 
-function onSavePoints(){
-   
-   return function()
-   {
-   	  if (points.length == 0) {
+function onSavePoints() {
+
+	return function() {
+		if (points.length == 0) {
 			alert("请先初始化点集");
 			return;
 		}
-        var textFile = null;
-         var saveContent = "";
-         for (var i = 0; i < points.length-1; i++) 
-		 {
+		var textFile = null;
+		var saveContent = "";
+		for (var i = 0; i < points.length - 1; i++) {
 			saveContent = saveContent + points[i].x + "," + points[i].y + "," + points[i].z + ",";
-	 	 }
+		}
 
-         saveContent = saveContent + points[points.length-1].x + "," + points[points.length-1].y + "," + points[points.length-1].z ;
+		saveContent = saveContent + points[points.length - 1].x + "," + points[points.length - 1].y + "," + points[points.length - 1].z;
 
-         textFile = makeTextFile(saveContent);
+		textFile = makeTextFile(saveContent);
 
-         $("#adddiv").empty();
-      
-         var cc = "<a id=\"linkdown\"  href=\"" + textFile + "\" download=\"data.txt\">下载</a>";
-         $("#adddiv").append(cc);
-         
-         var element = document.getElementById("linkdown");
-         element.click();
-   }
+		$("#adddiv").empty();
+
+		var cc = "<a id=\"linkdown\"  href=\"" + textFile + "\" download=\"data.txt\">下载</a>";
+		$("#adddiv").append(cc);
+
+		var element = document.getElementById("linkdown");
+		element.click();
+	}
 
 }
 
@@ -188,7 +176,14 @@ function onClear() {
 		hullValid = false;
 		progressing = false;
 		removeFaces();
-	    STLFileName ="";
+		STLFileName = "";
+	}
+}
+
+function onShowPoint() {
+	removeFromScene("pointMesh");
+	if (displayConfig.showPoint) {
+		showPoints();
 	}
 }
 
@@ -211,9 +206,9 @@ function onInit() {
 	return function() {
 		onClear()();
 		points = initPoints(ioConfig.pointCount);
-		showPoints();
-
-		
+		if (displayConfig.showPoint) {
+			showPoint();
+		}
 	}
 
 }

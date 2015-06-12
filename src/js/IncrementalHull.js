@@ -55,7 +55,7 @@ IncrementalHullGeometry = function(pointNumber) {
 		var pointList = [];
 		var triangleList = [];
 		var steps = [];
-        scope.mergeVertices();
+
 		if (scope.vertices.length < 4) {
 			return;
 		}
