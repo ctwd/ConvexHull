@@ -21,8 +21,10 @@ var playConfig = {
 
 var displayConfig = {
 	showPoint: true,
+	showSTLMesh: true,
 	perspectiveCamera: true,
 	orthographicCamera: false,
+
 };
 
 var authorConfig = {
@@ -41,12 +43,16 @@ $(document).ready(
 			var data = $(window.frames['exec_target'].document.body).find("textarea").html();
 			if(data != null)
 			{
+			
+                  onClear()();
 				  alert(data.replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
 				  var filename = $("#upload_file").val();
+				 
                   $("#upload_file").val('');
 
                   var index = filename.lastIndexOf('\\');
                   var name = filename.substring(index+1);
+                  STLFileName = name;
 
 			      if (name == null || name=="") 
 			      {
@@ -57,7 +63,7 @@ $(document).ready(
 			       index = filename.lastIndexOf('.');
 			       var type =  filename.substring(index+1);			        
 	
-	               onClear();
+	               
 	               loadFile(name,type);
                                      
 			 }//end if(data !=null )
@@ -78,9 +84,9 @@ function setupGUI() {
 	var displayGui = gui.addFolder("显示控制");
 	var authorGui = gui.addFolder("关于作者");
 
-	ioGUI.add(ioConfig, "pointCount").min(4).max(100).step(1).name("随机点数").onFinishChange();
+	ioGUI.add(ioConfig, "pointCount").min(4).max(100).step(1).name("随机点数").onFinishChange();   
+	ioGUI.add(ioConfig, "init").name("初始化点集");
     ioGUI.add(ioConfig, "openFile").name("选择文件");
-    ioGUI.add(ioConfig, "init").name("初始化点集");
     ioGUI.add(ioConfig, "clear").name("清空");
     ioGUI.add(ioConfig, "saveFile").name("保存点集");
 
@@ -95,8 +101,10 @@ function setupGUI() {
 	playGui.add(playConfig, "dampFactor").min(0.0).max(0.3).step(0.01).name("转动阻尼").onFinishChange(onDampChanged);
 
 	displayGui.add(displayConfig, "showPoint").name("显示顶点").onChange();
+	displayGui.add(displayConfig, "showSTLMesh").name("显示模型").listen().onFinishChange(onShowSTLMesh);
 	displayGui.add(displayConfig, "perspectiveCamera").name("透视投影").listen().onFinishChange(onPerspectiveCamera);
 	displayGui.add(displayConfig, "orthographicCamera").name("正交投影").listen().onFinishChange(onOrthographicCamera);
+
 
 	authorGui.add(authorConfig, "author1").name("清软研140");
 	authorGui.add(authorConfig, "author2").name("清软研143");
@@ -111,10 +119,22 @@ function setupGUI() {
 	gui.open();
 }
 
+function onShowSTLMesh()
+{
 
+    if(displayConfig.showSTLMesh)
+    {
+    	removeFromScene("loadSTL");
+    	 if (STLFileName == null || STLFileName=="") 
+    	 	return;
+        loadFile(STLFileName,"stl");
+    }
+    else
+    {
+       removeFromScene("loadSTL");
+    }
 
-
-
+}
 
 function onOpenFile() {
 	return function() 
@@ -165,6 +185,7 @@ function onClear() {
 		hullValid = false;
 		progressing = false;
 		removeFaces();
+	    STLFileName ="";
 	}
 }
 
@@ -185,7 +206,7 @@ function onAnimation() {
 
 function onInit() {
 	return function() {
-		onClear();
+		onClear()();
 		points = initPoints(ioConfig.pointCount);
 		showPoints();
 
@@ -201,7 +222,8 @@ function onHull() {
 			alert("请先初始化点集");
 			return;
 		}
-		//removeFromScene("loadSTL");
+		removeFromScene("loadSTL");
+		displayConfig.showSTLMesh = false;
 		removeFaces();
 		switch (hullConfig.type) {
 			case "增量法":

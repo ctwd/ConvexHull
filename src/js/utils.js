@@ -146,6 +146,9 @@ function initPoints(count) {
 
 function loadFile (name,type) 
 {
+	
+	 
+	 STLFileName = name;
 	 if (type == "stl") 
 	 {
                      
@@ -176,17 +179,27 @@ function loadFile (name,type)
                 //所有坐标都在减后 /max *800
                 max = 800/max;
 
-                for (var i = 0; i < loadgeometry.vertices.length; i++) 
+                if (points.length == 0) 
                 {
-                	loadgeometry.vertices[i].sub(centerObj);
-                	loadgeometry.vertices[i].multiplyScalar ( max );
-                	points.push(loadgeometry.vertices[i]);
-
+                	for (var i = 0; i < loadgeometry.vertices.length; i++) 
+                    {
+	                	loadgeometry.vertices[i].sub(centerObj);
+	                	loadgeometry.vertices[i].multiplyScalar ( max );        
+	                	points.push(loadgeometry.vertices[i]);
+                    }
                 }
-                //sort(points, 0, points.length - 1);
+                else
+                {
+	                for (var i = 0; i < loadgeometry.vertices.length; i++) 
+	                {
+	                	loadgeometry.vertices[i].sub(centerObj);
+	                	loadgeometry.vertices[i].multiplyScalar ( max );        
+	                }
+                }
+                sort(points, 0, points.length - 1);
 
                 loadgeometry.verticesNeedUpdate = true;                                          
-                var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialBasic );
+                var loadmesh = new THREE.Mesh( loadgeometry, geometryMaterialLoadMesh );
                 loadmesh.name ="loadSTL";
                 scene.add( loadmesh );    
                 showPoints();
@@ -213,7 +226,7 @@ function loadFile (name,type)
 				  	  var vertex = new THREE.Vector3(ch[i], ch[i+1], ch[i+2]);
 				  	  points.push(vertex);
 				  	}
-                   // sort(points, 0, points.length - 1);
+                    sort(points, 0, points.length - 1);
                     showPoints();			  	
 				  } 	
 	            else
