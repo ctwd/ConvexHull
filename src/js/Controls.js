@@ -207,7 +207,7 @@ function onInit() {
 		onClear()();
 		points = initPoints(ioConfig.pointCount);
 		if (displayConfig.showPoint) {
-			showPoint();
+			showPoints();
 		}
 	}
 
