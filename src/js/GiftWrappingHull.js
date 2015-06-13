@@ -11,6 +11,22 @@ GiftWrappingHullGeometry = function(pointNumber) {
 	this.mergeVertices();
 
 	scope.hull = function() {
+
+		pointFinish = function(point, pindex) {
+			for (var i = 0; i < point.triangles.length; i++) {
+				triangle = point.triangles[i];
+				for (var j = 0; j < 3; j++) {
+					if(triangle.points[j] == pindex) {
+						continue;
+					}
+					if (triangle.neighbors[j] == null) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
 		var delta = 1e-9;
 		var pointList = [];
 		var triangleList = [];
@@ -36,19 +52,38 @@ GiftWrappingHullGeometry = function(pointNumber) {
 		pointA = pointList[indexA];
 		var indexB = (indexA + 1) % pointList.length;
 		var angleB = Math.abs((pointList[indexB].clone().sub(pointA)).angleTo(pointList[indexB].clone().setY(pointA.y).sub(pointA)));
+		if(pointList[indexB].x == pointA.x && pointList[indexB].z == pointA.z) {
+			angleB = Math.abs((new THREE.Vector3(0,1,0)).angleTo(new THREE.Vector3(1, 0,0)))
+		}
+		var disB = (pointList[indexB].clone().sub(pointA)).length();
 		for (var i = 0; i < pointList.length; i++) {
 			if (i == indexA || i == indexB) {
 				continue;
 			}
 			angleI = Math.abs((pointList[i].clone().sub(pointA)).angleTo(pointList[i].clone().setY(pointA.y).sub(pointA)));
+			if(pointList[i].x == pointA.x && pointList[i].z == pointA.z) {
+				angleI = Math.abs((new THREE.Vector3(0,1,0)).angleTo(new THREE.Vector3(1, 0,0)))
+			}
+			var disI = (pointList[i].clone().sub(pointA)).length();
 			if (angleI < angleB) {
 				angleB = angleI;
+				disB = disI;
 				indexB = i;
+			} else if (angleI == angleB) {
+				if (disI < disB) {
+					angleB = angleI;
+					disB = disI;
+					indexB = i;
+				}
 			}
 		}
 		pointB = pointList[indexB];
 		var indexC = (Math.max(indexA, indexB) + 1) % pointList.length;
+
 		triNormal = (pointB.clone().sub(pointA)).cross(pointB.clone().setY(pointA.y).sub(pointA));
+		if (pointA.y == pointB.y) {
+			triNormal = (pointB.clone().sub(pointA)).cross(pointB.clone().setY(pointA.y - 1).sub(pointA));
+		}
 		faceNormal = (pointB.clone().sub(pointA)).cross(triNormal);
 		if (faceNormal.y < -delta) {
 			faceNormal.negate();
@@ -58,6 +93,7 @@ GiftWrappingHullGeometry = function(pointNumber) {
 			normalC.negate();
 		}
 		angleC = Math.abs(faceNormal.angleTo(normalC));
+		disC = disToLine(pointList[indexC], pointA, pointB);
 		for (var i = 0; i < pointList.length; i++) {
 			if (i == indexA || i == indexB || i == indexC) {
 				continue;
@@ -67,9 +103,20 @@ GiftWrappingHullGeometry = function(pointNumber) {
 				normalI.negate();
 			}
 			angleI = Math.abs(faceNormal.angleTo(normalI))
+			disI = disToLine(pointList[i], pointA, pointB);
+			if (disI < delta) {
+				continue;
+			}
 			if (angleI < angleC) {
 				angleC = angleI;
 				indexC = i;
+				disC = disI;
+			} else if (angleI == angleC) {
+				if (disI < disC) {
+					angleC = angleI;
+					indexC = i;
+					disC = disI;
+				}
 			}
 		}
 		pointC = pointList[indexC];
@@ -82,6 +129,20 @@ GiftWrappingHullGeometry = function(pointNumber) {
 		faceNormal = (pointB.clone().sub(pointA)).cross(pointC.clone().sub(pointA));
 		if (faceNormal.y > delta) {
 			swap(triangle.points, 1, 2);
+		} else if (faceNormal.y >= 0) {
+			for (var i = 0; i < pointList.length; i++) {
+				if (i != indexA && i != indexB && i != indexC) {
+					var n = faceNormal.clone();
+					var dir = pointList[i].clone().sub(pointA.clone());
+					var value = n.dot(dir);
+					if (Math.abs(value) > delta) {
+						if (value > delta) {
+							swap(triangle.points, 1, 2);
+						}
+						break;
+					}
+				}
+			}
 		}
 		for (var j = 0; j < 3; j++) {
 			pointList[triangle.points[j]].triangles.push(triangle);
@@ -98,6 +159,9 @@ GiftWrappingHullGeometry = function(pointNumber) {
 				if (triangleList[i].neighbors[j] == null) {
 					indexNext = null;
 					angleNext = null;
+					disNext = null;
+					usedNext = null;
+					pointFinishNext = null;
 					for (var k = 0; k < pointList.length; k++) {
 						if (k == pointIds[0] || k == pointIds[1] || k == pointIds[2]) {
 							continue;
@@ -105,14 +169,43 @@ GiftWrappingHullGeometry = function(pointNumber) {
 						points = [pointList[pointIds[(j + 2) % 3]], pointList[pointIds[(j + 1) % 3]], pointList[k]];
 						nromalK = (points[1].clone().sub(points[0])).cross(points[2].clone().sub(points[0]));
 						angleK = faceNormal.angleTo(nromalK);
+						disK = disToLine(points[2], points[0], points[1]);
+						pointFinishK = pointFinish(points[2],k);
+						if (disK < delta) {
+							continue;
+						}
 						if (indexNext == null) {
 							indexNext = k;
-							angleNext = angleK
+							angleNext = angleK;
+							disNext = disK;
+							usedNext = points[2].used;
+							pointFinishNext = pointFinishK;
 							continue;
 						} else {
 							if (angleK < angleNext) {
 								angleNext = angleK;
 								indexNext = k;
+								disNext = disK;
+								usedNext = points[2].used;
+								pointFinishNext = pointFinishK;
+							} else if (angleK == angleNext) {
+								if (!usedNext && points[2].used) {
+									angleNext = angleK;
+									indexNext = k;
+									disNext = disK;
+									usedNext = true;
+									pointFinishNext = pointFinishK;
+								} else if (usedNext && points[2].used) {
+
+										if (pointFinishNext && !pointFinishK) {
+											angleNext = angleK;
+											indexNext = k;
+											disNext = disK;
+											usedNext = true;
+											pointFinishNext = pointFinishK;
+										}
+									
+								}
 							}
 						}
 					}

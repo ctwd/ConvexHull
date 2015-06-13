@@ -134,8 +134,8 @@ makeTextFile = function(text) {
 	return textFile;
 };
 
-function noise(vertex) {
-	return vertex.clone().add(new THREE.Vector3(Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1))
+function noise(nv) {
+	return nv.clone().add(new THREE.Vector3(Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1))
 }
 
 function loadFile(name, type) {
@@ -206,10 +206,11 @@ function loadFile(name, type) {
 				if (ch.length % 3 == 0) {
 					for (i = 0; i <= ch.length - 3; i += 3) {
 
-						var vertex = new THREE.Vector3(ch[i], ch[i + 1], ch[i + 2]);
-						points.push(vertex);
+						var vertex = new THREE.Vector3(parseFloat(ch[i]), parseFloat(ch[i + 1]), parseFloat(ch[i + 2]));
+						points.push(noise(vertex));
+						// points.push(vertex);
 					}
-               
+
 					var g = new THREE.Geometry();
 					g.vertices = points;
 					g.mergeVertices();
@@ -227,6 +228,17 @@ function loadFile(name, type) {
 	}
 }
 
+function disToLine(_a, _b, _c) {
+	var a = _a.clone().sub(_b);
+	var b = _b.clone();
+	var c = _c.clone();
+
+	var dir = c.clone().sub(b.clone()).normalize();
+
+	var proj = a.dot(dir);
+
+	return Math.sqrt(a.lengthSq() - proj * proj)
+}
 
 function loadOldSTLFile(name) {
 
