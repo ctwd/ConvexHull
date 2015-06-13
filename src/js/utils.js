@@ -138,6 +138,10 @@ function noise(nv) {
 	return nv.clone().add(new THREE.Vector3(Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1))
 }
 
+function addNoise(nv) {
+	nv.add(new THREE.Vector3(Math.random() * 0.1, Math.random() * 0.1, Math.random() * 0.1))
+}
+
 function loadFile(name, type) {
 
 	if (type == "stl") {
@@ -177,12 +181,16 @@ function loadFile(name, type) {
 			for (var i = 0; i < loadgeometry.vertices.length; i++) {
 				loadgeometry.vertices[i].sub(centerObj);
 				loadgeometry.vertices[i].multiplyScalar(max);
-				points.push(noise(loadgeometry.vertices[i]));
+				points.push(loadgeometry.vertices[i].clone());
 			}
 			var g = new THREE.Geometry();
 			g.vertices = points;
 			g.mergeVertices();
 			points = g.vertices;
+
+			for (var i = 0; i < points.length; i++) {
+				addNoise(points[i]);
+			}
 
 			sort(points, 0, points.length - 1);
 
@@ -207,14 +215,17 @@ function loadFile(name, type) {
 					for (i = 0; i <= ch.length - 3; i += 3) {
 
 						var vertex = new THREE.Vector3(parseFloat(ch[i]), parseFloat(ch[i + 1]), parseFloat(ch[i + 2]));
-						points.push(noise(vertex));
-						// points.push(vertex);
+						points.push(vertex);
 					}
 
 					var g = new THREE.Geometry();
 					g.vertices = points;
 					g.mergeVertices();
 					points = g.vertices;
+					for (var i = 0; i < points.length; i++) {
+						addNoise(points[i]);
+					}
+
 					sort(points, 0, points.length - 1);
 					if (displayConfig.showPoint) {
 						showPoints();
