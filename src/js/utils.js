@@ -204,12 +204,12 @@ function loadFile(name, type) {
 				ch = new Array;
 				ch = data.split(",");
 				if (ch.length % 3 == 0) {
-					for (i = 0; i <= ch.length - 3; i += 2) {
+					for (i = 0; i <= ch.length - 3; i += 3) {
 
 						var vertex = new THREE.Vector3(ch[i], ch[i + 1], ch[i + 2]);
 						points.push(vertex);
 					}
-
+               
 					var g = new THREE.Geometry();
 					g.vertices = points;
 					g.mergeVertices();
