@@ -183,6 +183,7 @@ function loadFile(name, type) {
 				loadgeometry.vertices[i].multiplyScalar(max);
 				points.push(loadgeometry.vertices[i].clone());
 			}
+			
 			var g = new THREE.Geometry();
 			g.vertices = points;
 			g.mergeVertices();
@@ -214,6 +215,7 @@ function loadFile(name, type) {
 				if (ch.length % 3 == 0) {
 					for (i = 0; i <= ch.length - 3; i += 3) {
 
+						// var vertex = new THREE.Vector3((parseFloat(ch[i])-300)*10, parseFloat(ch[i + 1]), parseFloat(ch[i + 2]));
 						var vertex = new THREE.Vector3(parseFloat(ch[i]), parseFloat(ch[i + 1]), parseFloat(ch[i + 2]));
 						points.push(vertex);
 					}
@@ -222,6 +224,7 @@ function loadFile(name, type) {
 					g.vertices = points;
 					g.mergeVertices();
 					points = g.vertices;
+
 					for (var i = 0; i < points.length; i++) {
 						addNoise(points[i]);
 					}

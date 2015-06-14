@@ -17,6 +17,27 @@ DivideConquerHullGeometry = function(pointNumber) {
 	// this.mergeVertices();
 
 	scope.hull = function() {
+
+		check = function(triangles) {
+			indexMin = triangles[0].index;
+			indexMax = triangles[triangles.length - 1].index;
+			for (var i = 0; i < triangles.length; i++) {
+				var tr = triangles[i];
+				for (var j = 0; j < 3; j++) {
+					if (tr.neighbors[j] == null) {
+						return false;
+					}
+					if (!tr.neighbors[j].valid) {
+						return false;
+					}
+					if (tr.neighbors[j] < indexMin || tr.neighbors[j] > indexMax) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
 		dcHull = function(l, r) {
 			nextL = function(pointLeft, pointRight) {
 				var pointIds = [];
@@ -142,6 +163,25 @@ DivideConquerHullGeometry = function(pointNumber) {
 				}
 				return [next, nextLr, nextTriangle];
 			}
+			wfsList = function(triangleList, seedList) {
+				var seed = [];
+				for (var i = 0; i < seedList.length; i++) {
+					seedList[i].valid = false;
+					seed.push(seedList[i]);
+				}
+				while (seed.length != 0) {
+					var nextSeed = [];
+					for (var i = 0; i < seed.length; i++) {
+						for (var j = 0; j < 3; j++) {
+							if (seed[i].neighbors[j] != null && seed[i].neighbors[j].valid) {
+								seed[i].neighbors[j].valid = false;
+								nextSeed.push(seed[i].neighbors[j]);
+							}
+						}
+					}
+					seed = nextSeed;
+				}
+			}
 
 			dfsList = function(triangleList, seedList) {
 				if (seedList.length == 0) {
@@ -176,8 +216,8 @@ DivideConquerHullGeometry = function(pointNumber) {
 			}
 
 			merge = function(triangleListLeft, triangleListRight, triangleRing, leftSeed, rightSeed) {
-				dfsList(triangleListLeft, leftSeed);
-				dfsList(triangleListRight, rightSeed);
+				wfsList(triangleListLeft, leftSeed);
+				wfsList(triangleListRight, rightSeed);
 
 				var result = [];
 				var mergeToRemove = [];
@@ -231,6 +271,12 @@ DivideConquerHullGeometry = function(pointNumber) {
 						}
 						return triangleListLeft;
 					} else {
+						// if (!check(triangleListLeft)) {
+						// 	check(triangleListLeft)
+						// }
+						// if (!check(triangleListRight)) {
+						// 	check(triangleListRight)
+						// }
 						// first edge.
 						var pointLeft = middle;
 						var pointRight = middle + 1;
@@ -317,12 +363,24 @@ DivideConquerHullGeometry = function(pointNumber) {
 							var temp = leftPair[i];
 							temp[0].valid = false;
 							temp[1].neighbors[1] = temp[0].neighbors[temp[2]]
+							oldTriangle = temp[0].neighbors[temp[2]];
+							for (var j = 0; j < 3; j++) {
+								if (oldTriangle.neighbors[j] && oldTriangle.neighbors[j].index == temp[0].index) {
+									oldTriangle.neighbors[j] = temp[1];
+								}
+							}
 							temp[0].neighbors[temp[2]] = null;
 						}
 						for (var i = 0; i < rightPair.length; i++) {
 							var temp = rightPair[i];
 							temp[0].valid = false;
-							temp[1].neighbors[0] = temp[0].neighbors[temp[2]]
+							temp[1].neighbors[0] = temp[0].neighbors[temp[2]];
+							oldTriangle = temp[0].neighbors[temp[2]];
+							for (var j = 0; j < 3; j++) {
+								if (oldTriangle.neighbors[j] && oldTriangle.neighbors[j].index == temp[0].index) {
+									oldTriangle.neighbors[j] = temp[1];
+								}
+							}
 							temp[0].neighbors[temp[2]] = null;
 						}
 						for (var i = 0; i < triangleRing.length; i++) {
@@ -539,8 +597,11 @@ DivideConquerHullGeometry = function(pointNumber) {
 			pointList.push(vertex);
 		}
 
+		// triangleList = dcHull(0, 13);
 		triangleList = dcHull(0, pointList.length - 1);
-
+		// if (!check(triangleList)) {
+		// 	check(triangleList)
+		// }
 		for (var i = 0; i < triangleList.length; i++) {
 			var pointIds = triangleList[i].points;
 			var points = [pointList[pointIds[0]], pointList[pointIds[1]], pointList[pointIds[2]]];
