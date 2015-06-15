@@ -164,6 +164,12 @@ DivideConquerHullGeometry = function(pointNumber) {
 				return [next, nextLr, nextTriangle];
 			}
 			wfsList = function(triangleList, seedList) {
+				if (seedList.length == 0) {
+					for (var i = 0; i < triangleList.length; i++) {
+						triangleList[i].valid = false;
+					}
+					return;
+				}
 				var seed = [];
 				for (var i = 0; i < seedList.length; i++) {
 					seedList[i].valid = false;
