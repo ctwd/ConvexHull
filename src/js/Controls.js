@@ -86,7 +86,7 @@ function setupGUI() {
 	ioGUI.add(ioConfig, "saveFile").name("保存点集");
 
 
-	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法"]).name("算法类型").onChange(onType());
+	hullGui.add(hullConfig, "type", ["增量法", "礼品包装法", "冲突图法", "分治法", "分治法(改)"]).name("算法类型").onChange(onType());
 	hullGui.add(hullConfig, "convexHull").name("生成凸包");
 
 	playGui.add(playConfig, "animation").name("播放动画").onChange(onAnimation());
@@ -254,6 +254,7 @@ function onHull() {
 				progressing = false;
 				break;
 			case "分治法":
+			case "分治法(改)":
 				geometry = new DivideConquerHullGeometry();
 				geometry.vertices = points;
 				meta = geometry.hull();
@@ -336,29 +337,8 @@ function onProgressChanged() {
 		case "分治法":
 			progressDiviedConquer();
 			break;
-		default:
-			break;
-	}
-	progressing = false;
-}
-
-function onProgressChanged() {
-	if (geometry == null) {
-		return;
-	}
-	removeFaces();
-	switch (hullConfig.type) {
-		case "增量法":
-			progressIncremental();
-			break;
-		case "礼品包装法":
-			progressGiftWrapping();
-			break;
-		case "冲突图法":
-			progressConflictGraph();
-			break;
-		case "分治法":
-			progressDiviedConquer();
+		case "分治法(改)":
+			progressDiviedConquerEx();
 			break;
 		default:
 			break;
@@ -566,6 +546,88 @@ function progressDiviedConquer() {
 	}
 }
 
+function progressDiviedConquerEx() {
+	MovingFace1 = null;
+	MovingFace2 = null;
+	var lastTime = new Date().getTime();
+	var trl = meta[0];
+	var actions = meta[1];
+	meta[3] = 0;
+	var1 = 0;
+	var2 = 0;
+	var finalTriangles = [];
+	var finalStep = Math.floor(playConfig.progress * meta[2] / 100);
+	for (var i = 0; i < finalStep; i++) {
+		if (var1 >= actions.length) {
+			break;
+		}
+		var removeCount = actions[var1][0].length;
+		var addCount = actions[var1][1];
+		if (var1 != 0) {
+			addCount -= actions[var1 - 1][1];
+		}
+		if (addCount + removeCount <= var2) {
+			var2 = 0;
+			var1++;
+			i--;
+			continue;
+		}
+		if (actions[var1][2] == "inc") {
+			if (var2 < removeCount) {
+				removeId = actions[var1][0][var2];
+				finalTriangles[removeId] = false;
+			} else {
+				var index = actions[var1 - 1][1] + var2 - removeCount;
+
+				if (finalTriangles[index] != true) {
+					finalTriangles.push(true);
+				}
+			}
+		} else {
+			if (var2 < addCount) {
+				var index = index = actions[var1 - 1][1] + var2;
+				if (finalTriangles[index] != true) {
+					finalTriangles.push(true);
+				}
+			} else {
+				removeId = actions[var1][0][var2 - addCount];
+				finalTriangles[removeId] = false;
+			}
+		}
+		var2++;
+
+	}
+	meta[3] = finalStep;
+	if (meta[3] > meta[2]) {
+		meta[2] = meta[3];
+	}
+
+	for (var i = 0; i < finalTriangles.length && i < trl.length; i++) {
+		if (finalTriangles[i]) {
+			newFace = GenerateFaceGeometry(trl[i], points, false);
+			newFace1 = GenerateFaceGeometry(trl[i], points, true);
+
+			var mesh = new THREE.Mesh(newFace, geometryMaterialBasic);
+			mesh.matrixAutoUpdate = false;
+			mesh.name = "dcFace_base" + i;
+			var wiremesh = new THREE.Mesh(newFace1, geometryMaterialWireFrame);
+			wiremesh.matrixAutoUpdate = false;
+			wiremesh.name = "dcFace_inwire" + i;
+			var inmesh = new THREE.Mesh(newFace1, geometryMaterialInFace);
+			inmesh.matrixAutoUpdate = false;
+			inmesh.name = "dcFace_inface" + i;
+
+			objs.push(mesh.name);
+			objs.push(wiremesh.name);
+			objs.push(inmesh.name);
+
+			scene.add(mesh);
+			scene.add(wiremesh);
+			scene.add(inmesh);
+		}
+	}
+}
+
 function updateScene() {
 	if (geometry == null) {
 		return;
@@ -584,6 +646,9 @@ function updateScene() {
 			break;
 		case "分治法":
 			updateDiviedConquer();
+			break;
+		case "分治法(改)":
+			updateDiviedConquerEx();
 			break;
 		default:
 			break;
@@ -998,6 +1063,226 @@ function updateDiviedConquer() {
 			scene.add(acmesh);
 			scene.add(wiremesh);
 			scene.add(inmesh);
+		}
+		var2++;
+		meta[3]++;
+		playConfig.progress = Math.floor(meta[3] * 100 / meta[2]);
+		lastTime = time;
+	} else {
+		if (MovingFace1) {
+			removeFromScene("dcMovingOutFace");
+			removeFromScene("dcMovingWireFace");
+			removeFromScene("dcMovingInFace");
+
+			var pts = MovingFace1.vertices;
+			var vecLen = pts[4].clone().sub(pts[3]).length();
+
+			var factor = (time - lastTime + 0.0) / nextDcInterval
+
+			var dir = (((pts[5].clone().sub(pts[3])).multiplyScalar(factor)).add((pts[4].clone().sub(pts[3])).multiplyScalar(1.0 - factor))).normalize();
+
+			pts[2].copy(dir.clone().multiplyScalar(vecLen).add(pts[3]));
+			var faceNormal = (pts[1].clone().sub(pts[0])).cross(pts[2].clone().sub(pts[0]));
+
+			MovingFace1.faces[0].normal.copy(faceNormal);
+			MovingFace1.verticesNeedUpdate = true;
+			MovingFace1.normalsNeedUpdate = true;
+
+			MovingFace2.faces[0].normal.copy(faceNormal.negate());
+			MovingFace2.verticesNeedUpdate = true;
+			MovingFace2.normalsNeedUpdate = true;
+
+			var mesh = new THREE.Mesh(MovingFace1, geometryMaterialBasic);
+			mesh.matrixAutoUpdate = false;
+			mesh.name = "dcMovingOutFace";
+
+			var wiremesh = new THREE.Mesh(MovingFace2, geometryMaterialWireFrame);
+			wiremesh.matrixAutoUpdate = false;
+			wiremesh.name = "dcMovingWireFace";
+
+			var inmesh = new THREE.Mesh(MovingFace2, geometryMaterialBasic);
+			inmesh.matrixAutoUpdate = false;
+			inmesh.name = "dcMovingInFace";
+
+			objs.push(mesh.name);
+			scene.add(mesh);
+			objs.push(wiremesh.name);
+			scene.add(wiremesh);
+			objs.push(inmesh.name);
+			scene.add(inmesh);
+		}
+	}
+}
+
+function updateDiviedConquerEx() {
+	if (geometry == null) {
+		return;
+	}
+	var time = new Date().getTime();
+
+	// interval = 300.0 / playConfig.speed;
+
+	if (time - lastTime > nextDcInterval) {
+		var trl = meta[0];
+		var actions = meta[1];
+		var totalMoves = meta[2];
+		if (counter != 0) {
+			counter--;
+			lastTime = time;
+			if (counter == 0) {
+				//开始删除之前把所有要删除的面变红
+				if (var1 < actions.length) {
+					removeCount = actions[var1][0].length;
+					addCount = actions[var1][1];
+					if (var1 != 0) {
+						addCount -= actions[var1 - 1][1];
+					}
+					if ((var2 == 0 && actions[var1][2] == "inc") || (var2 == addCount && actions[var1][2] == "d&c")) {
+						for (var i = 0; i < actions[var1][0].length; i++) {
+
+							newFace = new THREE.Geometry();
+							newFace.vertices = points;
+							var pointIds = trl[actions[var1][0][i]].points;
+							var pts = [points[pointIds[0]], points[pointIds[1]], points[pointIds[2]]];
+							var face = new THREE.Face3(pointIds[0], pointIds[1], pointIds[2]);
+							var faceNormal = (pts[1].clone().sub(pts[0])).cross(pts[2].clone().sub(pts[0]));
+							face.normal.copy(faceNormal);
+							newFace.faces.push(face);
+							var mesh = new THREE.Mesh(newFace, geometryMaterialActive);
+							mesh.matrixAutoUpdate = false;
+							mesh.name = "dcFace_active_remove" + actions[var1][0][i];
+							objs.push(mesh.name);
+							scene.add(mesh);
+						}
+					}
+				}
+			}
+			return;
+		}
+		MovingFace1 = null;
+		MovingFace2 = null;
+		unstressPoint();
+		nextDcInterval = 300.0 / playConfig.speed;
+
+		removeFromScene("dcMovingOutFace");
+		removeFromScene("dcMovingWireFace");
+		removeFromScene("dcMovingInFace");
+
+
+		if (var1 == 0 && var2 == 0) {
+			meta[3] = 0;
+		}
+		if (var1 >= actions.length) {
+			playConfig.progress = 100;
+			return;
+		}
+		removeCount = actions[var1][0].length;
+		addCount = actions[var1][1];
+		if (var1 != 0) {
+			addCount -= actions[var1 - 1][1];
+		}
+		if (addCount + removeCount <= var2) {
+			var2 = 0;
+			if (var1 >= 1) {
+				for (var i = actions[var1 - 1][1]; i < actions[var1][1]; i++) {
+					removeFromScene("dcLine" + var1 + i);
+					removeFromScene("dcFace_active" + i);
+				}
+				counter = 3;
+			}
+			var1++;
+			return;
+		}
+		if (actions[var1][2] == "inc" && removeCount != 0 && addCount != 0) {
+			triangleId = actions[var1][1] - 1;
+			stressPoint(trl[triangleId].points[2]);
+		}
+		if ((var2 == removeCount - 1 && actions[var1][2] == "inc") || (var2 == addCount - 1 && actions[var1][2] == "d&c")) {
+			//if (actions[var1][2] == "inc") {
+			for (var i = actions[var1 - 1][1]; i < actions[var1][1]; i++) {
+				lineGeometry = new THREE.Geometry();
+				var ids;
+				if (actions[var1][2] == "inc") {
+					ids = [0, 1];
+				} else if (trl[i].direction == "l") {
+					ids = [2, 0];
+				} else {
+					ids = [1, 2];
+				}
+				lineGeometry.vertices.push(
+					points[trl[i].points[ids[0]]].clone(),
+					points[trl[i].points[ids[1]]].clone()
+				);
+				lineGeometry.computeLineDistances();
+				var object = new THREE.Line(lineGeometry, new THREE.LineBasicMaterial({
+					color: 0xff0000,
+					linewidth: 15
+				}), THREE.LinePieces);
+				object.name = "dcLine" + var1 + i;
+				objs.push(object.name);
+				scene.add(object);
+			}
+			counter = 3;
+		}
+		if ((var2 < removeCount && actions[var1][2] == "inc") || (var2 < removeCount + addCount && var2 >= addCount && actions[var1][2] == "d&c")) {
+			removeId = actions[var1][0][var2];
+			if (actions[var1][2] == "d&c") {
+				removeId = actions[var1][0][var2 - addCount];
+			}
+			removeFromScene("dcFace_base" + removeId);
+			removeFromScene("dcFace_active" + removeId);
+			removeFromScene("dcFace_active_remove" + removeId);
+			removeFromScene("dcFace_inwire" + removeId);
+			removeFromScene("dcFace_inface" + removeId);
+		} else {
+			if (actions[var1][2] == "d&c") {
+				var i = actions[var1 - 1][1] + var2;
+				if (i < actions[var1][1] - 1) {
+					addDivideConquerMovingFace(trl, i + 1);
+					nextDcInterval = 1500.0 / playConfig.speed
+				}
+			} else {
+				MovingFace1 = null;
+				MovingFace2 = null;
+			}
+
+			i = actions[var1 - 1][1] + var2 - removeCount;
+
+			if (actions[var1][2] == "d&c") {
+				i = actions[var1 - 1][1] + var2;
+			}
+			newFace = GenerateFaceGeometry(trl[i], points, false);
+
+			newFace1 = GenerateFaceGeometry(trl[i], points, true);
+
+			var mesh = new THREE.Mesh(newFace, geometryMaterialBasic);
+			mesh.matrixAutoUpdate = false;
+			mesh.name = "dcFace_base" + i;
+
+			var acmesh = new THREE.Mesh(newFace, geometryMaterialActive);
+			acmesh.matrixAutoUpdate = false;
+			acmesh.name = "dcFace_active" + i;
+
+			var wiremesh = new THREE.Mesh(newFace1, geometryMaterialWireFrame);
+			wiremesh.matrixAutoUpdate = false;
+			wiremesh.name = "dcFace_inwire" + i;
+
+			var inmesh = new THREE.Mesh(newFace1, geometryMaterialInFace);
+			inmesh.matrixAutoUpdate = false;
+			inmesh.name = "dcFace_inface" + i;
+
+
+			objs.push(mesh.name);
+			objs.push(wiremesh.name);
+			objs.push(inmesh.name);
+
+			scene.add(mesh);
+			scene.add(wiremesh);
+			scene.add(inmesh);
+			if (actions[var1][2] == "inc") {
+				objs.push(acmesh.name);
+				scene.add(acmesh);
+			}
 		}
 		var2++;
 		meta[3]++;
